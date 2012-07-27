@@ -1,0 +1,15 @@
+{
+  "name": "tumble-tag",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "3.0.0beta7",
+    "jade": "*",
+    "passport": "*",
+    "passport-tumblr": "*",
+    "ejs": ">= 0.0.0"
+  }
+}
