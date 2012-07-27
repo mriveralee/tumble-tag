@@ -7,8 +7,11 @@ lib-cov
 *.pid
 *.gz
 
-
 *TUMBLR_OAUTH_KEYS.js
+*.idea
+.idea/*
+*.iml
+
 pids
 logs
 results
