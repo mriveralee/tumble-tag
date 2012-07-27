@@ -8,6 +8,7 @@ lib-cov
 *.gz
 
 
+*TUMBLR_OAUTH_KEYS.js
 pids
 logs
 results
@@ -16,3 +17,4 @@ node_modules
 npm-debug.log
 
 .DS_Store
+.old
