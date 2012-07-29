@@ -17,7 +17,7 @@ var TumblrStrategy = passportTumblr.Strategy;
 var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
 
 /// NODEMAILER
-var mailer = require('./controllers/mailer.js')
+var mailer = require('./controllers/MailController.js')
 
 
 

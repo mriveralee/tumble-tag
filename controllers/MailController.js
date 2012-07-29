@@ -1,20 +1,21 @@
 var nodemailer = require("nodemailer");
+var sendMailTransport = nodemailer.createTransport("Sendmail");
+
+
 
 // create reusable transport method (opens pool of SMTP connections)
 var smtpTransport = nodemailer.createTransport("SMTP",{
   service: "Gmail",
   auth: {
-    user: "gmail.user@gmail.com",
-    pass: "userpass"
+    user: "tumbletag@gmail.com",
+    pass: "cctest123"
   }
 });
 
 
-var sendMailTransport = nodemailer.createTransport("Sendmail");
-
 // setup e-mail data with unicode symbols
 var mailOptions = {
-  from: "Tumble Tag ✔ <mike@mikeriv.com>", // sender address
+  from: "Tumble Tag <tumbletag@gmail.com>", // sender address   ✔
   to: "mrivera.lee@gmail.com", // list of receivers  comma separated
   subject: "Hello ✔", // Subject line
   text: "Hello world ✔", // plaintext body
@@ -25,8 +26,8 @@ var mailOptions = {
 function sendMailWithMessage(message) {
   mailOptions.html = "OUR JSON IS: \n\n" + JSON.stringify(message);
   mailOptions.text = "OUR TEXT IS: \n\n" + message;
- //smtpTransport.sendMail(mailOptions, function(error, response){
-  sendMailTransport.sendMail(mailOptions, function(error, response) {
+ smtpTransport.sendMail(mailOptions, function(error, response){
+ // sendMailTransport.sendMail(mailOptions, function(error, response) {
     if(error){
         console.log(error);
       }
