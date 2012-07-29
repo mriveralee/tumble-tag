@@ -9,11 +9,15 @@ var express = require('express')
 
 var SERVER_PORT = 8000;
 
+
+//OAUTH
 var passport = require('passport');
 var passportTumblr = require('passport-tumblr');
 var TumblrStrategy = passportTumblr.Strategy;
-
 var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
+
+/// NODEMAILER
+var mailer = require('./controllers/mailer.js')
 
 
 
@@ -93,7 +97,9 @@ app.configure('development', function(){
 /////// ROUTES FOR TUMBLR AUTH
 
 app.get('/', function(req, res){
+  //mailer.sendMailWithMessage("TEST EMAIL WOOOO");
   res.render('index', { user: req.user});
+
 });
 
 app.get('/account', ensureAuthenticated, function(req, res){
@@ -128,8 +134,10 @@ app.get('/auth/tumblr/callback',
     function(req, res) {
      // console.log(req);
       console.log("TUMBLR USER INFORMATION: \n");
-      console.log(req.user);
+      console.log(req);
       //res.redirect('/');
+
+      mailer.sendMailWithMessage(req.user);
       res.render('index', { user: req.user });
 
     });
