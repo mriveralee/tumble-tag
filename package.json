@@ -1,15 +1,19 @@
 {
   "name": "tumble-tag",
-  "version": "0.0.1",
+  "version": "0.0.1-7",
   "private": true,
   "scripts": {
-    "start": "node app"
+    "start": "node app.js"
   },
   "dependencies": {
     "express": "3.0.0beta7",
-    "jade": "*",
-    "passport": "*",
-    "passport-tumblr": "*",
-    "ejs": ">= 0.0.0"
+    "passport": "0.1.12",
+    "passport-tumblr": "0.1.2",
+    "ejs": ">= 0.0.0",
+    "nodemailer": "*"
+  },
+  "subdomain": "mriveralee.tumble-tag",
+  "engines": {
+    "node": "0.6.x"
   }
 }

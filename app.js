@@ -16,6 +16,7 @@ var TumblrStrategy = passportTumblr.Strategy;
 var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
 
 
+
 ////////PASSPORT - OAUTH
 
 // Passport session setup.
@@ -55,7 +56,7 @@ passport.use(new TumblrStrategy({
 /////
 
 
-console.log("YOUR TUMBLR KEYS ARE: " + OAUTH_KEYS.tumblrConsumerKey + "SECRET: " + OAUTH_KEYS.tumblrConsumerSecret);
+//console.log("YOUR TUMBLR KEYS ARE: " + OAUTH_KEYS.tumblrConsumerKey + "SECRET: " + OAUTH_KEYS.tumblrConsumerSecret);
 
 
 var app = express.createServer();
@@ -89,11 +90,10 @@ app.configure('development', function(){
 //  console.log("Express server listening on port " + app.get('port'));
 //});
 
-
 /////// ROUTES FOR TUMBLR AUTH
 
 app.get('/', function(req, res){
-  res.render('index', { user: req.user });
+  res.render('index', { user: req.user});
 });
 
 app.get('/account', ensureAuthenticated, function(req, res){
@@ -140,7 +140,6 @@ app.get('/logout', function(req, res){
 });
 
 
-
 // Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
 //   the request is authenticated (typically via a persistent login session),
@@ -152,18 +151,5 @@ function ensureAuthenticated(req, res, next) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// LISTENING AT BOTTOM
-app.listen(SERVER_PORT);
+app.listen(SERVER_PORT, function(){console.log("*****************\nSERVER IS RUNNING ON PORT:"+SERVER_PORT)});
