@@ -3,21 +3,26 @@
  * Module dependencies.
  */
 
-var express = require('express')
-  , routes = require('./routes')
-  , http = require('http');
+var express = require('express');
+var routes = require('./routes');
+var http = require('http');
 
 var SERVER_PORT = 8000;
 
-
-//OAUTH
+// OAUTH
 var passport = require('passport');
 var passportTumblr = require('passport-tumblr');
 var TumblrStrategy = passportTumblr.Strategy;
 var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
 
-/// NODEMAILER
-var mailer = require('./controllers/MailController.js')
+// NODE-MAILER
+var mailer = require('./controllers/MailController.js');
+
+// Databases
+var sqlite3 = require('sqlite3').verbose();
+var db = new sqlite3.Database('./databases/tumbletag.db');
+var databaseController = require('./controllers/DatabaseController');
+
 
 
 
@@ -53,6 +58,16 @@ passport.use(new TumblrStrategy({
         // represent the logged-in user.  In a typical application, you would want
         // to associate the Tumblr account with a user record in your database,
         // and return that user instead.
+        var currentDate = new Date();
+        console.log(profile);
+        var data = {
+          'username' : profile.username,
+          'email' : 'mrivera.lee@gmail.com',
+          'token' : token,
+          'token_secret' : tokenSecret,
+          'create_date' : currentDate.getTime()
+        };
+        databaseController.insertInto('users', data);
         return done(null, profile);
       });
     }
@@ -75,14 +90,19 @@ app.configure(function(){
   app.use(express.methodOverride());
   app.use(express.cookieParser());
   app.use(express.session({ secret:'supGURLHowYouDoin' }));
+
   //Passport
   app.use(passport.initialize());
   app.use(app.router);
   app.use(express.static(__dirname + '/public'));
 
+  //Make DB
+  databaseController.createDatabase(db);
+
+
 
 });
-
+//
 app.configure('development', function(){
   app.use(express.errorHandler());
   app.set('port', app.get('port'));
@@ -98,17 +118,36 @@ app.configure('development', function(){
 
 app.get('/', function(req, res){
   //mailer.sendMailWithMessage("TEST EMAIL WOOOO");
-  res.render('index', { user: req.user});
 
+//  var currentDate = new Date();
+//  var data = {
+//    'username' : 'TESTUsER',
+//    'email' : 'mrivera.lee@gmail.com',
+//    'token' : 'bananas',
+//    'token_secret' : 'secret',
+//    'create_date' : currentDate.getTime()
+//  };
+//
+//
+//  databaseController.insertInto('users', dataArray);
+  res.render('index', { user: req.user});
 });
+
+
 
 app.get('/account', ensureAuthenticated, function(req, res){
   res.render('account', { user: req.user });
 });
 
+
+
 app.get('/login', function(req, res){
   res.render('login', { user: req.user });
 });
+
+
+
+
 
 // GET /auth/tumblr
 //   Use passport.authenticate() as route middleware to authenticate the
@@ -122,30 +161,42 @@ app.get('/auth/tumblr',
       // function will not be called.
     });
 
+
+
+
+
 // GET /auth/tumblr/callback
 //   Use passport.authenticate() as route middleware to authenticate the
 //   request.  If authentication fails, the user will be redirected back to the
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
 
+
+
+
 // URL we give to tumblr is HOSTNAME.COM/auth/tumblr/callback
 app.get('/auth/tumblr/callback',
     passport.authenticate('tumblr', { failureRedirect: '/login' }),
     function(req, res) {
-     // console.log(req);
+
       console.log("TUMBLR USER INFORMATION: \n");
-      console.log(req);
+      //console.log(req.query);
       //res.redirect('/');
 
-      mailer.sendMailWithMessage(req.user);
+     // mailer.sendMailWithMessage(req.user);
       res.render('index', { user: req.user });
 
     });
+
+
+
 
 app.get('/logout', function(req, res){
   req.logout();
   res.redirect('/');
 });
+
+
 
 
 // Simple route middleware to ensure user is authenticated.
@@ -160,4 +211,9 @@ function ensureAuthenticated(req, res, next) {
 
 
 /// LISTENING AT BOTTOM
-app.listen(SERVER_PORT, function(){console.log("*****************\nSERVER IS RUNNING ON PORT:"+SERVER_PORT)});
+app.listen(SERVER_PORT, function(){console.log("\n********************************\n* SERVER RUNNING ON PORT: "+SERVER_PORT+" *\n********************************\n")});
+
+
+
+//===== PUBLIC =================================================================
+module.exports.database = db;
