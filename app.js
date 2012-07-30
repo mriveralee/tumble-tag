@@ -23,7 +23,8 @@ var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('./databases/tumbletag.db');
 var databaseController = require('./controllers/DatabaseController');
 
-
+//Error Console
+var errorConsole = require('./controllers/ErrorConsoleController');
 
 
 ////////PASSPORT - OAUTH
@@ -62,7 +63,7 @@ passport.use(new TumblrStrategy({
         console.log(profile);
         var data = {
           'username' : profile.username,
-          'email' : 'mrivera.lee@gmail.com',
+          'email' : '',
           'token' : token,
           'token_secret' : tokenSecret,
           'create_date' : currentDate.getTime()
@@ -117,7 +118,7 @@ app.configure('development', function(){
 /////// ROUTES FOR TUMBLR AUTH
 
 app.get('/', function(req, res){
-  //mailer.sendMailWithMessage("TEST EMAIL WOOOO");
+  //mailer.sendTestMailWithMessage("TEST EMAIL WOOOO");
 
 //  var currentDate = new Date();
 //  var data = {
@@ -145,7 +146,14 @@ app.get('/login', function(req, res){
   res.render('login', { user: req.user });
 });
 
+app.post('/loginWithEmail', function(req, res){
+  console.log("LOGIN WITH EMAIL:" + req.body.email);
 
+  //Store email in our session
+  req.session.userName = req.body.email;
+
+  res.redirect('/auth/tumblr');
+});
 
 
 
@@ -180,10 +188,32 @@ app.get('/auth/tumblr/callback',
     function(req, res) {
 
       console.log("TUMBLR USER INFORMATION: \n");
-      //console.log(req.query);
-      //res.redirect('/');
 
-     // mailer.sendMailWithMessage(req.user);
+      var setParams = {
+        'email' : req.session.userName
+      };
+
+      var whereParams = {
+         username : (req.user.username) ? (req.user.username) : "NO SUCH USER"
+      };
+
+      databaseController.update('users', setParams, whereParams);
+
+      var count = 0;
+      databaseController.selectAllFrom('users', whereParams, function(err, row) {
+        if (err) {
+          var errAtRow = err + "at row " + row;
+          errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
+          return;
+         }
+        console.log("ROW: " + row +"with EMAIL:" + row['email']);
+        var message = "ROW WAS:" + JSON.stringify(row) + "\n\n and count: " + count;
+        mailer.sendMail(row['email'], message);
+        count++;
+
+      });
+
+     // mailer.sendTestMailWithMessage(req.user);
       res.render('index', { user: req.user });
 
     });
