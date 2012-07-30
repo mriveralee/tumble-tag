@@ -7,35 +7,41 @@ var db;
 
 var SQL_MSG = {
   'INSERT_INTO' : "INSERT INTO",
+  'UPDATE' : "UPDATE",
+  'WHERE' : "WHERE",
+  'SET' : 'SET',
   'CREATE_TABLE' : "CREATE TABLE",
   'SELECT' : "SELECT",
   'FROM' : 'FROM',
   'SELECT_ALL_FROM': 'SELECT * FROM',
   'VALUES' : "values",
-  'DROP_TABLE_IF_EXISTS' : 'DROP TABLE IF EXISTS'
+  'DROP_TABLE_IF_EXISTS' : 'DROP TABLE IF EXISTS',
+  'SINGLE_QUOTE' : '\"'
 };
 
 // Field String of the form (field_1, field2, ...) for a db nameKey;
 var DB_FIELDS = {
   'users' : "(username, email, oauth_token, oauth_secret, date_created)"
-} ;
+};
 
 
 function createDatabase(database){
   db = database;
-  db.serialize(function() {
-    //Remove when finished testing
-    db.run("DROP TABLE IF EXISTS users");
+  if (!db) {
+  	db.serialize(function() {
+	    //Remove when finished testing
+	    db.run("DROP TABLE IF EXISTS users");
 
-    //store rooms in csv or json
-    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
-                               username TEXT, \
-                               email TEXT, \
-                               oauth_token TEXT,\
-                               oauth_secret TEXT,\
-                               date_created TEXT)");
-  });
-};
+	    //store rooms in csv or json
+	    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
+	                               username TEXT, \
+	                               email TEXT, \
+	                               oauth_token TEXT,\
+	                               oauth_secret TEXT,\
+	                               date_created TEXT)");
+	  });
+  }
+}
 
 /*@method: insertInto
  *@params: tableName - the table to be inserted into
@@ -62,16 +68,208 @@ function insertInto(tableName, params) {
     //Convert Params to an array
     var paramsArray = getInputArray(params);
     console.log(paramsArray);
-    runDBMessage(sqlMessage, paramsArray);
+    return runDBMessage(sqlMessage, paramsArray);
 
   }
   else {
     errorConsole.throwError("sqlMessage is undefined", "insertInto()", dbControllerName);
     return;
   }
+}
 
 
-};
+/*@method: select
+ *@params: tableName - the table to be inserted into
+ *         setParams- js object containing keys/values for the cols to be update.
+ *         whereParams - js object containing keys/values for the cols that should
+ *                       be updates
+ */
+
+function update(tableName, setParams, whereParams ) {
+  if (!tableName || !setParams) {
+    errorConsole.throwError("tableName or params is undefined", "update()", dbControllerName);
+    return;
+  }
+  var setFields = getSetFields(setParams);
+  var whereFields = getWhereFields(whereParams);
+
+  console.log("SET FIELDS:" + setFields);
+  console.log("WHERE FIELDS:" + whereFields);
+
+  if (!setFields) {
+    errorConsole.throwError("setFields is undefined", "update()", dbControllerName);
+    return;
+  }
+  var msgData = [SQL_MSG.UPDATE, tableName, setFields, whereFields];
+  var sqlMessage = getSQLMessageByAppending(msgData);
+
+  if (sqlMessage) {
+    return runDBMessage(sqlMessage);
+  }
+  else {
+    errorConsole.throwError("sqlMessage is undefined", "update()", dbControllerName);
+    return;
+  }
+}
+
+
+
+
+/*@method: update
+ *@params: tableName - the table to be inserted into
+ *         setParams- js object containing keys/values for the cols to be update.
+ *         whereParams - js object containing keys/values for the cols that should
+ *                       be updates
+ */
+
+function selectAllFrom(tableName, whereParams, callback) {
+  if (!tableName || !whereParams) {
+    errorConsole.throwError("tableName or params is undefined", "update()", dbControllerName);
+    return;
+  }
+  var whereFields = getWhereFields(whereParams);
+  console.log("WHERE FIELDS:" + whereFields);
+
+  var msgData = [SQL_MSG.SELECT_ALL_FROM, tableName, whereFields];
+  var sqlMessage = getSQLMessageByAppending(msgData);
+
+  if (sqlMessage) {
+      return eachDBMessage(sqlMessage, [], callback);
+  }
+  else {
+    errorConsole.throwError("sqlMessage is undefined", "select()", dbControllerName);
+    return;
+  }
+}
+
+
+
+
+
+
+/*@method: getSetFields
+ *@params: setParams- a JS object of a key:value where the key is the column name and its value
+  *                   representing the value to set at the corresponding column name.
+ *returns: a string of the form: "SET paramName= paramValue, ...."
+ */
+
+function getSetFields(setParams) {
+  if (setParams) {
+    var setMessage = SQL_MSG.SET + " ";
+    var quote = SQL_MSG.SINGLE_QUOTE;
+    for (key in setParams) {
+      setMessage += key + "=" + quote + setParams[key] + quote + ", ";
+    }
+    //Remove trailing comma
+    setMessage = setMessage.substring(0, setMessage.length-2);
+    return setMessage;
+  }
+  else {
+    errorConsole.throwError('setParams is undefined', "getSetFields()", dbControllerName);
+    return;
+  }
+}
+
+
+/*@method: getWhereFields
+ *@params: whereParams- a JS object of a key:value where the key is the column name and its value
+ *                   representing the value to set at the corresponding column name.
+ *          options- an array defining the AND | OR etc for each where params -> NOT USED YET
+ *returns: a string of the form: "WHERE paramName = paramValue, ...."
+ */
+
+function getWhereFields(whereParams, options) {
+  if (whereParams) {
+    var whereMessage = SQL_MSG.WHERE + " ";
+    var quote = SQL_MSG.SINGLE_QUOTE;
+    for (key in whereParams) {
+
+      whereMessage += key + "=" + quote + whereParams[key] + quote + ", ";
+    }
+    //Remove trailing comma & space
+    whereMessage = whereMessage.substring(0, whereMessage.length-2);
+    return whereMessage;
+  }
+  else {
+    errorConsole.throwError('whereParams is undefined', "getWhereFields()", dbControllerName);
+    return;
+  }
+}
+
+
+
+
+/*@method: runDBMessage
+ *@params: sqlMessage - a string representation of a sqlMessage
+ *returns: a string in the format "(?,?...,?) where a '?' is placed numParam times.
+ */
+
+
+function runDBMessage(sqlMessage, params) {
+  if (sqlMessage) {
+
+    if(!params) {
+      return db.run(sqlMessage);
+    }
+    else {
+      return db.run(sqlMessage, params);
+
+    }
+    console.log("Database - RUN: SUCCESS");
+  }
+  else {
+    errorConsole.throwError("SQL Message is undefined", "runDBMessage()", dbControllerName);
+  }
+}
+
+
+function getDBMessage(sqlMessage, params, callback) {
+  if (sqlMessage) {
+    if(!params) {
+      return db.get(sqlMessage, null, callback);
+    }
+    else {
+      return db.get(sqlMessage, params, callback);
+
+    }
+    console.log("Database - GET: SUCCESS");
+  }
+  else {
+    errorConsole.throwError("SQL Message is undefined", "getDBMessage()", dbControllerName);
+  }
+}
+
+function allDBMessage(sqlMessage, params, callback) {
+  if (sqlMessage) {
+    if(!params) {
+      return db.all(sqlMessage, callback);
+    }
+    else {
+      return db.all(sqlMessage, params, callback);
+
+    }
+    console.log("Database - ALL: SUCCESS");
+  }
+  else {
+    errorConsole.throwError("SQL Message is undefined", "allDBMessage()", dbControllerName);
+  }
+}
+
+function eachDBMessage(sqlMessage, params, callback) {
+  if (sqlMessage) {
+    if(!params) {
+      return db.each(sqlMessage, callback);
+    }
+    else {
+      return db.each(sqlMessage, params, callback);
+
+    }
+    console.log("Database - ALL: SUCCESS");
+  }
+  else {
+    errorConsole.throwError("SQL Message is undefined", "allDBMessage()", dbControllerName);
+  }
+}
 
 
 
@@ -92,7 +290,7 @@ function getNumParams(data) {
   }
   console.log("NUM_PARAMS: " + numParams);
   return numParams;
-};
+}
 
 
 
@@ -131,7 +329,7 @@ function getParamsString(data) {
   paramString += ")";
   console.log("PARAM STRING: " + paramString);
   return paramString;
-};
+}
 
 
 
@@ -149,8 +347,7 @@ function getSQLMessageByAppending(messageDetails) {
     sqlMessage += messageDetails[key] + " ";
   }
   //Remove trailing space
-  sqlMessage = sqlMessage.substring(0,
-  sqlMessage.length-1);
+  sqlMessage = sqlMessage.substring(0, sqlMessage.length-1);
   console.log("SQL COMMAND: " + sqlMessage);
   return sqlMessage;
 
@@ -172,34 +369,17 @@ function getSQLMessageByAppending(messageDetails) {
 
 
 
-/*@method: runDBMessage
- *@params: sqlMessage - a string representation of a sqlMessage
- *returns: a string in the format "(?,?...,?) where a '?' is placed numParam times.
- */
-
-
-function runDBMessage(sqlMessage, params) {
-  if (sqlMessage) {
-
-    if(!params) {
-      db.run(sqlMessage);
-    }
-     else {
-      db.run(sqlMessage, params);
-
-    }
-    console.log("Database Run: SUCCESS");
-  }
-  else {
-    errorConsole.throwError("SQL Message is undefined", "runDBMessage()", dbControllerName);
-  }
-};
 
 
 //===== PUBLIC =================================================================
 module.exports.createDatabase = createDatabase;
 module.exports.insertInto = insertInto;
+module.exports.update = update;
+module.exports.selectAllFrom = selectAllFrom;
 module.exports.runDBMessage = runDBMessage;
+module.exports.getDBMessage = getDBMessage;
+module.exports.allDBMessage = allDBMessage;
+module.exports.eachDBMessage = eachDBMessage;
 module.exports.getInputArray = getInputArray;
 module.exports.database = db;
 
