@@ -17,7 +17,7 @@ var smtpTransport = nodemailer.createTransport("SMTP",{
 var mailOptions = {
   from: "Tumble Tag <tumbletag@gmail.com>", // sender address   ✔
   to: "mrivera.lee@gmail.com", // list of receivers  comma separated
-  subject: "Hello ✔", // Subject line
+  subject: "You're Awesome- Thanks For Registering", // Subject line
   text: "Hello world ✔", // plaintext body
   html: "<b>Hello world ✔</b>" // html body
 }
@@ -41,9 +41,11 @@ function sendMailWithMessage(message) {
 
 
 
+//===== PUBLIC =================================================================
 module.exports.smtpTransport = smtpTransport;
 module.exports.mailOptions = mailOptions;
 module.exports.sendMailTransport = sendMailTransport;
+
 
 module.exports.sendMailWithMessage = sendMailWithMessage;
 
