@@ -23,7 +23,7 @@ var mailOptions = {
 }
 
 // send mail with defined transport object
-function sendMailWithMessage(message) {
+function sendTestMailWithMessage(message) {
   mailOptions.html = "OUR JSON IS: \n\n" + JSON.stringify(message);
   mailOptions.text = "OUR TEXT IS: \n\n" + message;
  smtpTransport.sendMail(mailOptions, function(error, response){
@@ -41,11 +41,33 @@ function sendMailWithMessage(message) {
 
 
 
+
+// send mail with defined transport object
+function sendMail(to, message) {
+  mailOptions.to = to;
+  mailOptions.html = "OUR JSON IS: \n\n" + JSON.stringify(message);
+  mailOptions.text = "OUR TEXT IS: \n\n" + message;
+  smtpTransport.sendMail(mailOptions, function(error, response){
+    // sendMailTransport.sendMail(mailOptions, function(error, response) {
+    if(error){
+      console.log(error);
+    }
+    else{
+      console.log("Message sent: " + response.message);
+    }
+    // if you don't want to use this transport object anymore, uncomment following line
+    //smtpTransport.close(); // shut down the connection pool, no more messages
+  });
+};
+
+
+
 //===== PUBLIC =================================================================
 module.exports.smtpTransport = smtpTransport;
 module.exports.mailOptions = mailOptions;
 module.exports.sendMailTransport = sendMailTransport;
+module.exports.sendMail = sendMail;
 
 
-module.exports.sendMailWithMessage = sendMailWithMessage;
+module.exports.sendTestMailWithMessage = sendTestMailWithMessage;
 
