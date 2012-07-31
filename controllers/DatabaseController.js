@@ -16,7 +16,8 @@ var SQL_MSG = {
   'SELECT_ALL_FROM': 'SELECT * FROM',
   'VALUES' : "values",
   'DROP_TABLE_IF_EXISTS' : 'DROP TABLE IF EXISTS',
-  'SINGLE_QUOTE' : '\"'
+  'SINGLE_QUOTE' : '\"',
+  'AND' : 'AND'
 };
 
 // Field String of the form (field_1, field2, ...) for a db nameKey;
@@ -30,7 +31,7 @@ function createDatabase(database){
   if (!db) {
   	db.serialize(function() {
 	    //Remove when finished testing
-	    db.run("DROP TABLE IF EXISTS users");
+	    //db.run("DROP TABLE IF EXISTS users");
 
 	    //store rooms in csv or json
 	    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
@@ -38,6 +39,8 @@ function createDatabase(database){
 	                               email TEXT, \
 	                               oauth_token TEXT,\
 	                               oauth_secret TEXT,\
+	                               confirmation_key TEXT,\
+	                               confirmed INTEGER,\
 	                               date_created TEXT)");
 	  });
   }
@@ -78,7 +81,7 @@ function insertInto(tableName, params) {
 }
 
 
-/*@method: select
+/*@method: update
  *@params: tableName - the table to be inserted into
  *         setParams- js object containing keys/values for the cols to be update.
  *         whereParams - js object containing keys/values for the cols that should
@@ -115,11 +118,10 @@ function update(tableName, setParams, whereParams ) {
 
 
 
-/*@method: update
+/*@method: selectAllFrom
  *@params: tableName - the table to be inserted into
- *         setParams- js object containing keys/values for the cols to be update.
  *         whereParams - js object containing keys/values for the cols that should
- *                       be updates
+ *                       be selected
  */
 
 function selectAllFrom(tableName, whereParams, callback) {
@@ -135,6 +137,33 @@ function selectAllFrom(tableName, whereParams, callback) {
 
   if (sqlMessage) {
       return eachDBMessage(sqlMessage, [], callback);
+  }
+  else {
+    errorConsole.throwError("sqlMessage is undefined", "select()", dbControllerName);
+    return;
+  }
+}
+
+
+/*@method: select
+ *@params: tableName - the table to be inserted into
+ *         whereParams - js object containing keys/values for the cols that should
+ *                       selected
+ */
+
+function selectFrom(tableName, whereParams, callback) {
+  if (!tableName || !whereParams) {
+    errorConsole.throwError("tableName or params is undefined", "update()", dbControllerName);
+    return;
+  }
+  var whereFields = getWhereFields(whereParams);
+  console.log("WHERE FIELDS:" + whereFields);
+
+  var msgData = [SQL_MSG.SELECT, tableName, whereFields];
+  var sqlMessage = getSQLMessageByAppending(msgData);
+
+  if (sqlMessage) {
+    return getDBMessage(sqlMessage, [], callback);
   }
   else {
     errorConsole.throwError("sqlMessage is undefined", "select()", dbControllerName);
@@ -183,11 +212,11 @@ function getWhereFields(whereParams, options) {
     var whereMessage = SQL_MSG.WHERE + " ";
     var quote = SQL_MSG.SINGLE_QUOTE;
     for (key in whereParams) {
-
-      whereMessage += key + "=" + quote + whereParams[key] + quote + ", ";
+     var andMessage = " " + SQL_MSG.AND + " ";
+      whereMessage += key + "=" + quote + whereParams[key] + quote + andMessage;
     }
-    //Remove trailing comma & space
-    whereMessage = whereMessage.substring(0, whereMessage.length-2);
+    //Remove trailing 'AND' & space
+    whereMessage = whereMessage.substring(0, whereMessage.length-5);
     return whereMessage;
   }
   else {
@@ -376,6 +405,7 @@ module.exports.createDatabase = createDatabase;
 module.exports.insertInto = insertInto;
 module.exports.update = update;
 module.exports.selectAllFrom = selectAllFrom;
+module.exports.selectFrom = selectFrom;
 module.exports.runDBMessage = runDBMessage;
 module.exports.getDBMessage = getDBMessage;
 module.exports.allDBMessage = allDBMessage;
