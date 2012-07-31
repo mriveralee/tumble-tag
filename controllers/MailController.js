@@ -45,8 +45,8 @@ function sendTestMailWithMessage(message) {
 // send mail with defined transport object
 function sendMail(to, message) {
   mailOptions.to = to;
-  mailOptions.html = "OUR JSON IS: \n\n" + JSON.stringify(message);
-  mailOptions.text = "OUR TEXT IS: \n\n" + message;
+  mailOptions.html = message;
+  mailOptions.text = message;
   smtpTransport.sendMail(mailOptions, function(error, response){
     // sendMailTransport.sendMail(mailOptions, function(error, response) {
     if(error){
