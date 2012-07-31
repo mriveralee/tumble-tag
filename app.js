@@ -18,13 +18,22 @@ var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
 // NODE-MAILER
 var mailer = require('./controllers/MailController.js');
 
+// Crypto
+var crypto = require('crypto');
+var SALT = "BANANASALT-2";
+
 // Databases
 var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('./databases/tumbletag.db');
 var databaseController = require('./controllers/DatabaseController');
 
-//Error Console
+// Error Console
 var errorConsole = require('./controllers/ErrorConsoleController');
+
+// Validator
+var Validator = require('validator');
+//var check = require('validator').check;
+//var sanitize = require('validator').sanitize;
 
 
 ////////PASSPORT - OAUTH
@@ -107,6 +116,9 @@ app.configure(function(){
 app.configure('development', function(){
   app.use(express.errorHandler());
   app.set('port', app.get('port'));
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(express.cookieParser());
 });
 
 
@@ -117,20 +129,9 @@ app.configure('development', function(){
 
 /////// ROUTES FOR TUMBLR AUTH
 
-app.get('/', function(req, res){
-  //mailer.sendTestMailWithMessage("TEST EMAIL WOOOO");
 
-//  var currentDate = new Date();
-//  var data = {
-//    'username' : 'TESTUsER',
-//    'email' : 'mrivera.lee@gmail.com',
-//    'token' : 'bananas',
-//    'token_secret' : 'secret',
-//    'create_date' : currentDate.getTime()
-//  };
-//
-//
-//  databaseController.insertInto('users', dataArray);
+
+app.get('/', function(req, res){
   res.render('index', { user: req.user});
 });
 
@@ -194,7 +195,7 @@ app.get('/auth/tumblr/callback',
       };
 
       var whereParams = {
-         username : (req.user.username) ? (req.user.username) : "NO SUCH USER"
+         'username' : (req.user.username) ? (req.user.username) : "NO SUCH USER"
       };
 
       databaseController.update('users', setParams, whereParams);
@@ -206,8 +207,39 @@ app.get('/auth/tumblr/callback',
           errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
           return;
          }
-        console.log("ROW: " + row +"with EMAIL:" + row['email']);
-        var message = "ROW WAS:" + JSON.stringify(row) + "\n\n and count: " + count;
+        var userEmail = row['email'];
+        console.log("ROW: " + row +" with EMAIL:" + userEmail);
+
+        //Create confirmation Key
+        var confirmationSha1 =  crypto.createHash('sha1');
+        var currentDate = new Date();
+        var timeString = currentDate.getTime() + "";
+        confirmationSha1.update(SALT+userEmail+timeString);
+        var confirmationKey = confirmationSha1.digest('base64');
+        var encodedKey = encodeURIComponent(confirmationKey);
+        var encodedEmail = encodeURIComponent(userEmail);
+
+        console.log(encodedKey + " : "+encodedEmail);
+        // Query String verision
+       // var confirmationLink = "http://localhost:8000/confirmation?email="+encodedEmail+"&key="+encodedKey;
+
+        // Route Param Version
+        var confirmationLink = "http://localhost:8000/confirm/"+encodedEmail+"/"+encodedKey;
+
+        var confirmationHTML = "<a href='" + confirmationLink + "'>"+ "Confirm Email"+"</a>";
+        // TODO: use a template
+        var message = confirmationHTML + "\n\nROW WAS: and count: " + count;
+
+        var setUserParams = {
+          'confirmation_key' : confirmationKey,
+          'confirmed' : 0
+        };
+
+        var whereUserParams = {
+          'id': row['id']
+        };
+        databaseController.update('users', setUserParams, whereUserParams);
+
         mailer.sendMail(row['email'], message);
         count++;
 
@@ -225,6 +257,69 @@ app.get('/logout', function(req, res){
   req.logout();
   res.redirect('/');
 });
+
+
+
+
+// Query String version
+//app.get('/confirm', function (req, res) {
+//  console.log('confirmation route');
+//});
+
+
+
+app.get('/confirm/:email/:key', function (req, res) {
+  //TODO: check sql injection against sanitize fxn
+  var key = req.param('key');
+  var email = req.param('email');
+  if (email && key) {
+    //Check if actual email
+    var isEmail = Validator.check(email).isEmail();
+    if (!isEmail) {
+      res.send("Invalid Email address");
+    }
+    var validEmail = Validator.sanitize(email).str;
+    var validKey = Validator.sanitize(key).str;
+
+    if (validEmail && validKey) {
+       var whereUserParams = {
+        'email': validEmail,
+        'confirmation_key': validKey
+      };
+
+      var setUserParams = {
+        'confirmed' : 1
+      };
+
+      databaseController.selectAllFrom('users', whereUserParams, function(err, row) {
+        if (err) {
+          var errAtRow = err + "at row " + row;
+          errorConsole.throwError(errAtRow, "selectFrom()", "app.js");
+          res.send("No such User!");
+          return;
+        }
+        whereUserParams.id = row['id'];
+        if (row['confirmed'] === 0) {
+          databaseController.update('users', setUserParams, whereUserParams);
+          res.send("You are now confirmed! Wooo!");
+        }
+        else {
+          res.send("You are already confirmed!");
+        }
+      });
+    }
+  }
+  else {
+    res.send("Oh no you bad boy- this doesn't work!");
+  }
+});
+
+
+
+
+
+
+
 
 
 
