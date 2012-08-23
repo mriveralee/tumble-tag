@@ -7,6 +7,9 @@ var express = require('express');
 var routes = require('./routes');
 var http = require('http');
 
+//Request for making HTTP(S) requests
+var request = require('request');
+
 var SERVER_PORT = 8000;
 
 // OAUTH
@@ -14,6 +17,25 @@ var passport = require('passport');
 var passportTumblr = require('passport-tumblr');
 var TumblrStrategy = passportTumblr.Strategy;
 var OAUTH_KEYS = require('./TUMBLR_OAUTH_KEYS.js');
+
+var OAuth = require('oauth').OAuth;
+var OA = new OAuth(
+  'http://www.tumblr.com/oauth/request_token',
+  'http://www.tumblr.com/oauth/access_token',
+  OAUTH_KEYS.tumblrConsumerKey,
+  OAUTH_KEYS.tumblrConsumerSecret,
+  '1.0A',
+  'http://127.0.0.1:3000/auth/tumblr/callback',
+  'HMAC-SHA1'
+);
+
+
+// Tumblr URLS
+var TumblrURLS = {
+    requestToken : 'http://www.tumblr.com/oauth/request_token',
+    authorize : 'http://www.tumblr.com/oauth/authorize',
+    accessToken : 'http://www.tumblr.com/oauth/access_token'
+};
 
 // NODE-MAILER
 var mailer = require('./controllers/MailController.js');
@@ -36,8 +58,9 @@ var Validator = require('validator');
 //var sanitize = require('validator').sanitize;
 
 
-////////PASSPORT - OAUTH
 
+
+////////PASSPORT - OAUTH
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
 //   serialize users into and deserialize users out of the session.  Typically,
@@ -333,6 +356,78 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
   res.redirect('/login')
 }
+
+
+
+// Function for getting blog followers
+app.get('/followers', function (req, res) {
+ //my token/secret for testing
+ var token = "h378Ix2Nu5I1Bvzzt8SJ5gcjhxUC8NrBZySHT45s2FSYZe9UmF";
+ var token_secret = "FEn583AW5jH32xyoanXRJGQwsH7imaLfVkwAgVTRR5idgJNjjS";
+ var blogName = "mikeriv.tumblr.com"; 
+ var callback = function (error, data, response) {
+    if (error) {
+     console.log(error);
+    }
+    console.log(data);
+    res.send(data);        
+ };
+ 
+  var blogPostsCallback = function (error, data, response) {
+    if (error) {
+     console.log(error);
+    }
+    console.log("RESPONSE" + data.response + data);
+    var users = data.response ? data.response.users : null;
+    var allPosts = "";
+    console.log(users);
+    for (user in users) {
+        var appendCallback = function(error, data, response) {
+            if (data) {
+                allPosts += data;
+            }
+            console.log('*******\n USER: ' + user + ' POSTS: ' + data);
+        };
+        getPostsForFollower(user, appendCallback);
+    }
+    
+ };
+ //Now get Followers
+ getFollowers(blogName, token, token_secret, blogPostsCallback);
+ //getFollowers(blogName, token, token_secret, callback);
+/* var oauth = { 
+    consumer_key: OAUTH_KEYS.tumblrConsumerKey,
+    consumer_secret: OAUTH_KEYS.tumblrConsumerSecret,
+    token: token,
+    token_secret: token_secret
+ };
+ 
+ OA.getProtectedResource(
+     'http://api.tumblr.com/v2/blog/mikeriv.tumblr.com/followers',
+     'GET',
+     token,
+     token_secret,
+     function (error, data, response) {
+         if (error) {
+             console.log(error);
+         }
+         //console.log(data);
+         res.send(data);
+     }
+   );
+*/
+});
+
+function getFollowers(blogName, token, token_secret, callback) {
+    var TumblrFollowersURL = 'http://api.tumblr.com/v2/blog/'+blogName+'/followers';
+    OA.getProtectedResource(TumblrFollowersURL, 'GET', token, token_secret, callback); 
+}
+
+function getPostsForFollower(user, appendCallback) {
+    var TumblrPostsURL = 'http://api.tumblr.com/v2/blog/'+user.name+'.tumblr.com'+'/posts?api_key='+OAUTH_KEYS.tumblrConsumerKey;
+    request.get(TumblrPostsURL, appendCallback);
+}
+
 
 
 /// LISTENING AT BOTTOM
