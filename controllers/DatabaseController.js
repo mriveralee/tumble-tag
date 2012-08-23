@@ -20,13 +20,13 @@ var SQL_MSG = {
   'AND' : 'AND'
 };
 
-// Field String of the form (field_1, field2, ...) for a db nameKey;
+// Field String of the form (field_1, field_2, ...) for a db nameKey;
 var DB_FIELDS = {
   'users' : "(username, email, oauth_token, oauth_secret, date_created)"
 };
 
 
-function createDatabase(database){
+function createDatabase(database){ 
   db = database;
   if (!db) {
   	db.serialize(function() {
