@@ -1,19 +1,25 @@
-{
+{  
   "name": "tumble-tag",
   "version": "0.0.1-8",
+  "author" : "Michael Rivera",
+  "description" : "Tumblr Tagging Notifications",
   "private": true,
   "scripts": {
     "start": "node app.js"
   },
   "dependencies": {
     "express": "3.0.0beta7",
+    "request" : "*",
     "passport": "0.1.12",
     "passport-tumblr": "0.1.2",
     "ejs": ">= 0.0.0",
     "nodemailer": "*",
     "sqlite3": "*",
     "crypto": "*",
-    "validator": "*"
+    "validator": "*",
+    "oauth": "*",
+    "tumblr" : "*",
+    "ntumblr" : "*"
   },
   "subdomain": "mriveralee.tumble-tag",
   "engines": {
