@@ -89,28 +89,48 @@ passport.use(new TumblrStrategy({
     },
     function(token, tokenSecret, profile, done) {
       // asynchronous verification, for effect...
-      process.nextTick(function () {
-
-        // To keep the example simple, the user's Tumblr profile is returned to
-        // represent the logged-in user.  In a typical application, you would want
-        // to associate the Tumblr account with a user record in your database,
-        // and return that user instead.
-        var currentDate = new Date();
-        console.log(profile);
-        var data = {
-          'username' : profile.username,
-          'email' : '',
-          'token' : token,
-          'token_secret' : tokenSecret,
-          'create_date' : currentDate.getTime()
-        };
-        databaseController.insertInto('users', data);
-        return done(null, profile);
-      });
+          process.nextTick(function () {
+    
+            // To keep the example simple, the user's Tumblr profile is returned to
+            // represent the logged-in user.  In a typical application, you would want
+            // to associate the Tumblr account with a user record in your database,
+            // and return that user instead.
+            var currentDate = new Date();
+            console.log(profile);
+            var data = {
+              'username' : profile.username,
+              'email' : '',
+              'token' : token,
+              'token_secret' : tokenSecret,
+              'create_date' : currentDate.getTime()
+            };
+            
+            var whereParams = {
+                'username': profile.username
+            };
+            databaseController.insertInto('users', data);
+            //Check if user already exists, if they do update them otherwise insert them
+          //TODO GET IT TO UPDATE IF ALREADYI N DB OTHER WISE ADD
+          /*databaseController.selectAllFrom('users', whereParams, function(err, row) {
+                if (!row) {
+                  //Add users
+                  console.log("Added User");
+                  databaseController.insertInto('users', data);
+           
+                }
+                else {
+                  //Update User
+                  var setParams = data;
+                  console.log("Updated User"); 
+                  databaseController.update('users', setParams, whereUserParams); 
+                }
+            });  
+            */
+            return done(null, profile);
+        });
     }
 ));
 /////
-
 
 //console.log("YOUR TUMBLR KEYS ARE: " + OAUTH_KEYS.tumblrConsumerKey + "SECRET: " + OAUTH_KEYS.tumblrConsumerSecret);
 
