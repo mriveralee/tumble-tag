@@ -1,7 +1,6 @@
 var nodemailer = require("nodemailer");
 var sendMailTransport = nodemailer.createTransport("Sendmail");
-
-
+var FROM_TUMBLE_TAG = "Tumble Tag <tumbletag@gmail.com>";
 
 // create reusable transport method (opens pool of SMTP connections)
 var smtpTransport = nodemailer.createTransport("SMTP",{
@@ -15,7 +14,7 @@ var smtpTransport = nodemailer.createTransport("SMTP",{
 
 // setup e-mail data with unicode symbols
 var mailOptions = {
-  from: "Tumble Tag <tumbletag@gmail.com>", // sender address   ✔
+  from: FROM_TUMBLE_TAG, // sender address   ✔
   to: "mrivera.lee@gmail.com", // list of receivers  comma separated
   subject: "You're Awesome- Thanks For Registering", // Subject line
   text: "Hello world ✔", // plaintext body
@@ -37,16 +36,13 @@ function sendTestMailWithMessage(message) {
     // if you don't want to use this transport object anymore, uncomment following line
     //smtpTransport.close(); // shut down the connection pool, no more messages
   });
-};
+}
 
 
 
 
 // send mail with defined transport object
-function sendMail(to, message) {
-  mailOptions.to = to;
-  mailOptions.html = message;
-  mailOptions.text = message;
+function sendMail(mailOptions) {
   smtpTransport.sendMail(mailOptions, function(error, response){
     // sendMailTransport.sendMail(mailOptions, function(error, response) {
     if(error){
@@ -58,16 +54,43 @@ function sendMail(to, message) {
     // if you don't want to use this transport object anymore, uncomment following line
     //smtpTransport.close(); // shut down the connection pool, no more messages
   });
-};
+}
 
+
+/* Sends A Confirmation Email Message
+ *
+ */
+function sendConfirmationEmail(userEmail, confirmationKey) {
+    if (userEmail && confirmationKey) {
+        var encodedKey = encodeURIComponent(confirmationKey);
+        var encodedEmail = encodeURIComponent(userEmail);
+        console.log(encodedKey + " : "+encodedEmail);
+        // Route Param Version
+        var confirmationLink = "http://localhost:8000/confirm/"+encodedEmail+"/"+encodedKey;
+        var confirmationHTML = "<a href='" + confirmationLink + "'>"+ "Confirm Email"+"</a>";
+                               
+        // TODO: use a template
+        var message = "To begin receiving tagging notifications, please confirm your email address:<br>" 
+                        + confirmationHTML 
+                        + "<br><br>Thanks,<br>Tumble Tag";
+                        
+       var mailOptions = {
+          from: FROM_TUMBLE_TAG, // sender address   ✔
+          to: userEmail, // list of receivers  comma separated
+          subject: "You're Awesome- Thanks For Registering For Tumble Tag", // Subject line
+          text: message, // plaintext body
+          html: message // html body
+        }
+        sendMail(mailOptions);
+   }
+}
 
 
 //===== PUBLIC =================================================================
-module.exports.smtpTransport = smtpTransport;
-module.exports.mailOptions = mailOptions;
-module.exports.sendMailTransport = sendMailTransport;
+//module.exports.smtpTransport = smtpTransport;
+//module.exports.sendMailTransport = sendMailTransport;
+module.exports.sendConfirmationEmail = sendConfirmationEmail;
 module.exports.sendMail = sendMail;
-
 
 module.exports.sendTestMailWithMessage = sendTestMailWithMessage;
 

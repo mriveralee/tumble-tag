@@ -85,7 +85,6 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new TumblrStrategy({
       consumerKey: OAUTH_KEYS.tumblrConsumerKey,
       consumerSecret: OAUTH_KEYS.tumblrConsumerSecret,
-      callbackURL: "http://127.0.0.1:3000/auth/tumblr/callback"
       callbackURL: "http://localhost:8000/auth/tumblr/callback"
     },
     function(token, tokenSecret, profile, done) {
@@ -207,16 +206,11 @@ app.get('/auth/tumblr',
 //   request.  If authentication fails, the user will be redirected back to the
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
-
-
-
-
-// URL we give to tumblr is HOSTNAME.COM/auth/tumblr/callback
+//  URL we give to tumblr is HOSTNAME.COM/auth/tumblr/callback
 app.get('/auth/tumblr/callback',
     passport.authenticate('tumblr', { failureRedirect: '/login' }),
     function(req, res) {
-
-      console.log("TUMBLR USER INFORMATION: \n");
+      //console.log("TUMBLR USER INFORMATION: \n");
 
       var setParams = {
         'email' : req.session.userName
@@ -225,8 +219,7 @@ app.get('/auth/tumblr/callback',
       var whereParams = {
          'username' : (req.user.username) ? (req.user.username) : "NO SUCH USER"
       };
-
-      databaseController.update('users', setParams, whereParams);
+      //databaseController.update('users', setParams, whereParams);
 
       var count = 0;
       databaseController.selectAllFrom('users', whereParams, function(err, row) {
@@ -235,30 +228,20 @@ app.get('/auth/tumblr/callback',
           errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
           return;
          }
-        var userEmail = row['email'];
-        console.log("ROW: " + row +" with EMAIL:" + userEmail);
+       // var userEmail = row['email'];
+        var userEmail = req.session.userName;
+        //console.log("ROW: " + row +" with EMAIL:" + userEmail);
 
         //Create confirmation Key
         var confirmationSha1 =  crypto.createHash('sha1');
         var currentDate = new Date();
         var timeString = currentDate.getTime() + "";
+
         confirmationSha1.update(SALT+userEmail+timeString);
         var confirmationKey = confirmationSha1.digest('base64');
-        var encodedKey = encodeURIComponent(confirmationKey);
-        var encodedEmail = encodeURIComponent(userEmail);
-
-        console.log(encodedKey + " : "+encodedEmail);
-        // Query String verision
-       // var confirmationLink = "http://localhost:8000/confirmation?email="+encodedEmail+"&key="+encodedKey;
-
-        // Route Param Version
-        var confirmationLink = "http://localhost:8000/confirm/"+encodedEmail+"/"+encodedKey;
-
-        var confirmationHTML = "<a href='" + confirmationLink + "'>"+ "Confirm Email"+"</a>";
-        // TODO: use a template
-        var message = confirmationHTML + "\n\nROW WAS: and count: " + count;
-
+        
         var setUserParams = {
+          'email': userEmail,
           'confirmation_key' : confirmationKey,
           'confirmed' : 0
         };
@@ -268,14 +251,14 @@ app.get('/auth/tumblr/callback',
         };
         databaseController.update('users', setUserParams, whereUserParams);
 
-        mailer.sendMail(row['email'], message);
+        mailer.sendConfirmationEmail(userEmail, confirmationKey);
         count++;
 
       });
 
+
      // mailer.sendTestMailWithMessage(req.user);
       res.render('index', { user: req.user });
-
     });
 
 
