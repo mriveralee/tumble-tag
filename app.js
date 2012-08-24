@@ -9,6 +9,10 @@ var http = require('http');
 
 //Request for making HTTP(S) requests
 var request = require('request');
+//Parallel Function Calls
+//var Step = require('step');
+var async = require('async');
+
 
 var SERVER_PORT = 8000;
 
@@ -82,6 +86,7 @@ passport.use(new TumblrStrategy({
       consumerKey: OAUTH_KEYS.tumblrConsumerKey,
       consumerSecret: OAUTH_KEYS.tumblrConsumerSecret,
       callbackURL: "http://127.0.0.1:3000/auth/tumblr/callback"
+      callbackURL: "http://localhost:8000/auth/tumblr/callback"
     },
     function(token, tokenSecret, profile, done) {
       // asynchronous verification, for effect...
@@ -347,7 +352,7 @@ app.get('/confirm/:email/:key', function (req, res) {
 
 
 
-// Simple route middleware to ensure user is authenticated.
+//   Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
 //   the request is authenticated (typically via a persistent login session),
 //   the request will proceed.  Otherwise, the user will be redirected to the
@@ -361,71 +366,131 @@ function ensureAuthenticated(req, res, next) {
 
 // Function for getting blog followers
 app.get('/followers', function (req, res) {
- //my token/secret for testing
- var token = "h378Ix2Nu5I1Bvzzt8SJ5gcjhxUC8NrBZySHT45s2FSYZe9UmF";
- var token_secret = "FEn583AW5jH32xyoanXRJGQwsH7imaLfVkwAgVTRR5idgJNjjS";
+ //my token/secret for testing need to keep updating when revoking access
+ var token = "5tV1X0bphJ2Ra5M0Ax6Km2BLA4LvBy66hWljZQAiWWowNbjYvv";
+ var token_secret = "t4fCMBipPE54SPyYRNqrSSN7mYizizN7QkSJ9voCrQxI5w7RSj";
  var blogName = "mikeriv.tumblr.com"; 
- var callback = function (error, data, response) {
-    if (error) {
-     console.log(error);
-    }
-    console.log(data);
-    res.send(data);        
- };
  
-  var blogPostsCallback = function (error, data, response) {
-    if (error) {
-     console.log(error);
-    }
-    console.log("RESPONSE" + data.response + data);
-    var users = data.response ? data.response.users : null;
-    var allPosts = "";
-    console.log(users);
-    for (user in users) {
-        var appendCallback = function(error, data, response) {
-            if (data) {
-                allPosts += data;
-            }
-            console.log('*******\n USER: ' + user + ' POSTS: ' + data);
-        };
-        getPostsForFollower(user, appendCallback);
-    }
+ var postsCallback = function(users, response) {
+    var count = 0;
+    var completionCount = 0;
+    var followers = users;
+    var followersLength = followers.length;
+    //console.log(followers);
+    var allPostData = [];
     
- };
- //Now get Followers
- getFollowers(blogName, token, token_secret, blogPostsCallback);
- //getFollowers(blogName, token, token_secret, callback);
-/* var oauth = { 
-    consumer_key: OAUTH_KEYS.tumblrConsumerKey,
-    consumer_secret: OAUTH_KEYS.tumblrConsumerSecret,
-    token: token,
-    token_secret: token_secret
+    
+    //Function for What we do once we have post data for a user
+    var grabbedPostDataCallback = function(posts) {
+        //console.log("grabbed post for completion == "+ completionCount); 
+        completionCount++; 
+        if (posts) {
+            //console.log("DATA AT CALLBACK");
+            //console.log(posts);
+            allPostData.push(posts);
+        }
+        if (completionCount == followersLength) {
+            //console.log(allPostData);
+            console.log("Sending all data to email");
+            //Send the posts to email
+            var message = JSON.stringify(allPostData);
+            //mailer.sendMail("mrivera.lee@gmail.com", message);
+            //TODO: TAKE THE DATA and scrap it for the current user's handle and then send notifcation
+              
+            //Returns the json
+            //allPostData is an array containing all posts for followers
+            response.send(allPostData);
+        }
+    };
+    
+    //Get all the data and append it together
+    async.whilst(
+        function() {
+            //console.log("COUNT: " + count +" && FollowersMAX: " + followers.length);
+            return (count < followers.length);
+        },
+        function(callback) {
+           // console.log('LENGTH: '+followers.length + " COUNT: " + count);
+            if (count < followers.length) {
+                var user = followers[count];
+                //console.log(count);
+                getPostsForFollower(user, grabbedPostDataCallback);
+                count++;
+                callback();
+            }
+        },
+        function(err) {
+            if(err) {
+                console.log(err);
+            }
+        }
+   );
  };
  
- OA.getProtectedResource(
-     'http://api.tumblr.com/v2/blog/mikeriv.tumblr.com/followers',
-     'GET',
-     token,
-     token_secret,
-     function (error, data, response) {
-         if (error) {
-             console.log(error);
-         }
-         //console.log(data);
-         res.send(data);
-     }
-   );
-*/
+ //Start the process of getting the followers and their posts
+ getFollowers(blogName, token, token_secret, postsCallback, res);
+  
+ 
 });
 
-function getFollowers(blogName, token, token_secret, callback) {
-    var TumblrFollowersURL = 'http://api.tumblr.com/v2/blog/'+blogName+'/followers';
-    OA.getProtectedResource(TumblrFollowersURL, 'GET', token, token_secret, callback); 
+
+
+
+
+function getFollowers(blogName, token, token_secret, postsCallback, res) {
+    var TumblrFollowersURL = 'http://api.tumblr.com/v2/blog/'+blogName+'/followers';   
+
+    OA.getProtectedResource(
+        TumblrFollowersURL, 
+        'GET', 
+        token, 
+        token_secret, 
+        function(error, data, response) {
+            if (error) {
+             console.log(error);
+             res.send(error);
+            }
+            else {
+                 var parsedData = JSON.parse(data);
+                 var users = parsedData.response ? parsedData.response.users : null;
+                //console.log(users);
+                if(postsCallback) {
+                   postsCallback(users, res);
+                }
+            }
+        }
+     );
 }
 
-function getPostsForFollower(user, appendCallback) {
+/* @Method: getPostsForFollower
+ * Makes a TumblrAPI request to the posts for a particular user
+ * @params: user - the user object to get posts for
+ *          appendCallback - an optional callback for appending multiple posts
+ * @returns: If not callback - the post data, otherwise it executes the callback with the data
+ */
+function getPostsForFollower(user, grabbedPostDataCallback) {
+    //console.log('USER: \n')
+    //console.log(user);
     var TumblrPostsURL = 'http://api.tumblr.com/v2/blog/'+user.name+'.tumblr.com'+'/posts?api_key='+OAUTH_KEYS.tumblrConsumerKey;
-    request.get(TumblrPostsURL, appendCallback);
+    request.get(TumblrPostsURL, function(error, response, data) {
+        if (error) {
+            console.log(error);
+        }
+        else if (data) {
+            //console.log("POST FOR USER\n");
+            //console.log(data);
+            data = JSON.parse(data);
+            var postsData= data.response ? data.response.posts : null;
+           // console.log(data.response..posts);
+            if (grabbedPostDataCallback) {
+               // console.log("GRABBEDPOSTCALLBACK");
+                grabbedPostDataCallback(postsData);
+            }
+            else {
+                return postsData;
+            }
+        }
+    });
 }
 
 
