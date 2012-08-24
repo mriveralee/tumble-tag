@@ -10,6 +10,7 @@
   "dependencies": {
     "express": "3.0.0beta7",
     "request" : "*",
+    "oauth": "*",
     "passport": "0.1.12",
     "passport-tumblr": "0.1.2",
     "ejs": ">= 0.0.0",
@@ -17,9 +18,10 @@
     "sqlite3": "*",
     "crypto": "*",
     "validator": "*",
-    "oauth": "*",
+    "async": "*",
     "tumblr" : "*",
     "ntumblr" : "*"
+    
   },
   "subdomain": "mriveralee.tumble-tag",
   "engines": {
