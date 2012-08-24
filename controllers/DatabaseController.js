@@ -28,21 +28,29 @@ var DB_FIELDS = {
 
 function createDatabase(database){ 
   db = database;
-  if (!db) {
-  	db.serialize(function() {
-	    //Remove when finished testing
-	    //db.run("DROP TABLE IF EXISTS users");
-
-	    //store rooms in csv or json
-	    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
-	                               username TEXT, \
-	                               email TEXT, \
-	                               oauth_token TEXT,\
-	                               oauth_secret TEXT,\
-	                               confirmation_key TEXT,\
-	                               confirmed INTEGER,\
-	                               date_created TEXT)");
-	  });
+  if (db) {
+    db.serialize(function() {
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", function(error, row) {
+            var tableExists = (row != undefined);
+            if(!tableExists) {
+                //Create the users table
+                db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
+                                           username TEXT, \
+                                           email TEXT, \
+                                           oauth_token TEXT,\
+                                           oauth_secret TEXT,\
+                                           confirmation_key TEXT,\
+                                           confirmed INTEGER,\
+                                           date_created TEXT)");
+               console.log("Users Table Created");
+              }
+              else {
+                  //Do Nothing
+                  console.log("Users Table Already Exists");
+              }
+             
+        });
+    });
   }
 }
 
@@ -234,14 +242,14 @@ function getWhereFields(whereParams, options) {
  */
 
 
-function runDBMessage(sqlMessage, params) {
+function runDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
 
     if(!params) {
       return db.run(sqlMessage);
     }
     else {
-      return db.run(sqlMessage, params);
+      return db.run(sqlMessage, params, callback);
 
     }
     console.log("Database - RUN: SUCCESS");
