@@ -88,44 +88,49 @@ passport.use(new TumblrStrategy({
       callbackURL: "http://localhost:8000/auth/tumblr/callback"
     },
     function(token, tokenSecret, profile, done) {
+  
       // asynchronous verification, for effect...
-          process.nextTick(function () {
-    
+         process.nextTick(function () {
+           
             // To keep the example simple, the user's Tumblr profile is returned to
             // represent the logged-in user.  In a typical application, you would want
             // to associate the Tumblr account with a user record in your database,
             // and return that user instead.
             var currentDate = new Date();
-            console.log(profile);
+            //console.log(profile);
             var data = {
+              'id' : 'COALESCE((SELECT id FROM users WHERE username="'+profile.username+'"), last_insert_rowid()+1)',
               'username' : profile.username,
-              'email' : '',
-              'token' : token,
-              'token_secret' : tokenSecret,
-              'create_date' : currentDate.getTime()
+              'email' : ' COALESCE((SELECT email FROM users WHERE username="'+profile.username+'"), NULL) ',
+              'oauth_token' : token,
+              'oauth_secret' : tokenSecret,
+              'confirmation_key' : 0,
+              'confirmed' : 0,
+              'date_created' : currentDate.getTime()
             };
             
             var whereParams = {
                 'username': profile.username
             };
-            databaseController.insertInto('users', data);
-            //Check if user already exists, if they do update them otherwise insert them
-          //TODO GET IT TO UPDATE IF ALREADYI N DB OTHER WISE ADD
-          /*databaseController.selectAllFrom('users', whereParams, function(err, row) {
-                if (!row) {
-                  //Add users
-                  console.log("Added User");
-                  databaseController.insertInto('users', data);
+         
+           // databaseController.insertInto('users', data);
+
+           //console.log(data);
+           var msg = "INSERT OR REPLACE INTO " + "users " 
+                      + databaseController.DB_FIELDS.users
+                      + " VALUES " + databaseController.getValues(data);
+           //console.log("RUN MESSAGE \n\n"+msg+"\n\n\n");     
            
-                }
-                else {
-                  //Update User
-                  var setParams = data;
-                  console.log("Updated User"); 
-                  databaseController.update('users', setParams, whereUserParams); 
-                }
-            });  
-            */
+           db.run(msg, function (error, row) {
+              if (error) {
+                  console.log(error);
+              }
+              else { 
+                  //Do nothing
+                  //console.log("ROW is: " + JSON.stringify(row));
+              }
+           });
+            
             return done(null, profile);
         });
     }
@@ -174,15 +179,9 @@ app.configure('development', function(){
 //  console.log("Express server listening on port " + app.get('port'));
 //});
 
-/////// ROUTES FOR TUMBLR AUTH
-
-
-
-app.get('/', function(req, res){
+app.get('/', function(req, res) {
   res.render('index', { user: req.user});
 });
-
-
 
 app.get('/account', ensureAuthenticated, function(req, res){
   res.render('account', { user: req.user });
@@ -194,31 +193,34 @@ app.get('/login', function(req, res){
   res.render('login', { user: req.user });
 });
 
+
+app.get('/logout', function(req, res){
+  req.logout();
+  res.redirect('/');
+});
+
+
 app.post('/loginWithEmail', function(req, res){
-  console.log("LOGIN WITH EMAIL:" + req.body.email);
-
   //Store email in our session
+  //console.log("LOGIN WITH EMAIL:" + req.body.email);
   req.session.userName = req.body.email;
-
   res.redirect('/auth/tumblr');
 });
 
 
+/////// ROUTES FOR TUMBLR AUTH
 
 // GET /auth/tumblr
 //   Use passport.authenticate() as route middleware to authenticate the
 //   request.  The first step in Tumblr authentication will involve redirecting
 //   the user to tumblr.com.  After authorization, Tumblr will redirect the user
 //   back to this application at /auth/tumblr/callback
-app.get('/auth/tumblr',
-    passport.authenticate('tumblr'),
-    function(req, res){
+app.get('/auth/tumblr', passport.authenticate('tumblr'),
+        function(req, res){
       // The request will be redirected to Tumblr for authentication, so this
       // function will not be called.
-    });
-
-
-
+        }
+);
 
 
 // GET /auth/tumblr/callback
@@ -267,36 +269,16 @@ app.get('/auth/tumblr/callback',
         };
 
         var whereUserParams = {
-          'id': row['id']
+          'username': row['username']
         };
+        console.log("\n\nCONFIRM KEY: "+row['confirmation_key']);
         databaseController.update('users', setUserParams, whereUserParams);
 
         mailer.sendConfirmationEmail(userEmail, confirmationKey);
         count++;
-
       });
-
-
-     // mailer.sendTestMailWithMessage(req.user);
       res.render('index', { user: req.user });
-    });
-
-
-
-
-app.get('/logout', function(req, res){
-  req.logout();
-  res.redirect('/');
-});
-
-
-
-
-// Query String version
-//app.get('/confirm', function (req, res) {
-//  console.log('confirmation route');
-//});
-
+ });
 
 
 app.get('/confirm/:email/:key', function (req, res) {
@@ -307,7 +289,7 @@ app.get('/confirm/:email/:key', function (req, res) {
     //Check if actual email
     var isEmail = Validator.check(email).isEmail();
     if (!isEmail) {
-      res.send("Invalid Email address");
+      sendErrorResponse(res, "Invalid Email address");
     }
     var validEmail = Validator.sanitize(email).str;
     var validKey = Validator.sanitize(key).str;
@@ -320,39 +302,48 @@ app.get('/confirm/:email/:key', function (req, res) {
 
       var setUserParams = {
         'confirmed' : 1
+        //,'confirmation_key' : ""
       };
-
-      databaseController.selectAllFrom('users', whereUserParams, function(err, row) {
-        if (err) {
-          var errAtRow = err + "at row " + row;
-          errorConsole.throwError(errAtRow, "selectFrom()", "app.js");
-          res.send("No such User!");
-          return;
-        }
-        whereUserParams.id = row['id'];
-        if (row['confirmed'] === 0) {
-          databaseController.update('users', setUserParams, whereUserParams);
-          res.send("You are now confirmed! Wooo!");
-        }
-        else {
-          res.send("You are already confirmed!");
-        }
+       databaseController.update('users', setUserParams, whereUserParams, function(err) { 
+           if (err) {
+              // Error in table
+              var errAtRow = err + "at row " + row;
+              errorConsole.throwError(errAtRow, "selectFrom()", "app.js");
+              sendErrorResponse(res, "Database Error");
+              return;
+            }
+            var hasChanges = this.changes;
+            console.log(this.changes);
+            if (hasChanges) {
+                //If User exists in database with these credentials for email and & confirmation key
+                sendResponse(res, "You are confirmed! Wooo!");
+                return;
+            }
+            else {
+                 //No Changes means no user in the table/invalid key
+                  // logic for resending confirmation key?
+                  sendErrorResponse(res, "Invalid Confirmation Key");
+                  return;
+             }
       });
     }
   }
   else {
-    res.send("Oh no you bad boy- this doesn't work!");
+    sendErrorResponse(res, "Invalid Confirmation Key");
   }
 });
 
 
+//Sends an error response message
+function sendErrorResponse(res, message) {
+    var errorMessage = "Error: " + message;
+    res.send(errorMessage);
+}
 
-
-
-
-
-
-
+//Sends a response message
+function sendResponse(res, message) {
+    res.send(message);
+}
 
 
 //   Simple route middleware to ensure user is authenticated.
@@ -362,7 +353,7 @@ app.get('/confirm/:email/:key', function (req, res) {
 //   login page.
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
-  res.redirect('/login')
+  res.redirect('/login');
 }
 
 
@@ -432,8 +423,6 @@ app.get('/followers', function (req, res) {
  
  //Start the process of getting the followers and their posts
  getFollowers(blogName, token, token_secret, postsCallback, res);
-  
- 
 });
 
 

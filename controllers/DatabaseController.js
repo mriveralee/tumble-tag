@@ -22,7 +22,7 @@ var SQL_MSG = {
 
 // Field String of the form (field_1, field_2, ...) for a db nameKey;
 var DB_FIELDS = {
-  'users' : "(username, email, oauth_token, oauth_secret, date_created)"
+  'users' : "(id, username, email, oauth_token, oauth_secret, confirmation_key, confirmed, date_created)"
 };
 
 
@@ -34,14 +34,23 @@ function createDatabase(database){
             var tableExists = (row != undefined);
             if(!tableExists) {
                 //Create the users table
-                db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
-                                           username TEXT, \
+                db.run("CREATE TABLE users(id INTEGER, \
+                                           username TEXT PRIMARY KEY, \
                                            email TEXT, \
                                            oauth_token TEXT,\
                                            oauth_secret TEXT,\
                                            confirmation_key TEXT,\
                                            confirmed INTEGER,\
                                            date_created TEXT)");
+                                            /*    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
+                                           username TEXT , \
+                                           email TEXT, \
+                                           oauth_token TEXT,\
+                                           oauth_secret TEXT,\
+                                           confirmation_key TEXT,\
+                                           confirmed INTEGER,\
+                                           date_created TEXT)");*/
+                                           
                console.log("Users Table Created");
               }
               else {
@@ -73,7 +82,7 @@ function insertInto(tableName, params) {
   }
   var msgData = [SQL_MSG.INSERT_INTO, tableName, DB_FIELDS[tableName], SQL_MSG.VALUES, paramString];
   var sqlMessage = getSQLMessageByAppending(msgData);
-
+    console.log(sqlMessage);
   if (sqlMessage) {
     console.log("WITH PARAMS:" + JSON.stringify(params));
     //Convert Params to an array
@@ -96,7 +105,7 @@ function insertInto(tableName, params) {
  *                       be updates
  */
 
-function update(tableName, setParams, whereParams ) {
+function update(tableName, setParams, whereParams, callback ) {
   if (!tableName || !setParams) {
     errorConsole.throwError("tableName or params is undefined", "update()", dbControllerName);
     return;
@@ -115,7 +124,7 @@ function update(tableName, setParams, whereParams ) {
   var sqlMessage = getSQLMessageByAppending(msgData);
 
   if (sqlMessage) {
-    return runDBMessage(sqlMessage);
+    return runDBMessage(sqlMessage, [], callback);
   }
   else {
     errorConsole.throwError("sqlMessage is undefined", "update()", dbControllerName);
@@ -244,15 +253,9 @@ function getWhereFields(whereParams, options) {
 
 function runDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
-
-    if(!params) {
-      return db.run(sqlMessage);
-    }
-    else {
+      console.log("Database - RUN: SUCCESS");
       return db.run(sqlMessage, params, callback);
-
-    }
-    console.log("Database - RUN: SUCCESS");
+      
   }
   else {
     errorConsole.throwError("SQL Message is undefined", "runDBMessage()", dbControllerName);
@@ -262,14 +265,15 @@ function runDBMessage(sqlMessage, params, callback) {
 
 function getDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
+    console.log("Database - GET: SUCCESS");
     if(!params) {
-      return db.get(sqlMessage, null, callback);
+      return db.get(sqlMessage, [], callback);
     }
     else {
       return db.get(sqlMessage, params, callback);
 
     }
-    console.log("Database - GET: SUCCESS");
+    
   }
   else {
     errorConsole.throwError("SQL Message is undefined", "getDBMessage()", dbControllerName);
@@ -278,6 +282,7 @@ function getDBMessage(sqlMessage, params, callback) {
 
 function allDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
+     console.log("Database - ALL: SUCCESS");
     if(!params) {
       return db.all(sqlMessage, callback);
     }
@@ -285,7 +290,7 @@ function allDBMessage(sqlMessage, params, callback) {
       return db.all(sqlMessage, params, callback);
 
     }
-    console.log("Database - ALL: SUCCESS");
+
   }
   else {
     errorConsole.throwError("SQL Message is undefined", "allDBMessage()", dbControllerName);
@@ -294,6 +299,7 @@ function allDBMessage(sqlMessage, params, callback) {
 
 function eachDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
+    console.log("Database - EACH: SUCCESS");
     if(!params) {
       return db.each(sqlMessage, callback);
     }
@@ -301,7 +307,7 @@ function eachDBMessage(sqlMessage, params, callback) {
       return db.each(sqlMessage, params, callback);
 
     }
-    console.log("Database - ALL: SUCCESS");
+
   }
   else {
     errorConsole.throwError("SQL Message is undefined", "allDBMessage()", dbControllerName);
@@ -404,8 +410,47 @@ function getSQLMessageByAppending(messageDetails) {
 
  }
 
+function getValues(data) {
 
+  if (!data) {
+    errorConsole.throwError("data is undefined", "getParamsString()", dbControllerName);
+    return;
+  }
 
+  var numParams = getNumParams(data);
+
+  if (!numParams || numParams <= 0) {
+    errorConsole.throwError("numParams is undefined", "getParamsString()", dbControllerName);
+    return;
+  }
+  
+  //Begin param string
+  var paramString = "(";
+  var count = 0;
+  for (key in data) {
+     //If contains COALESCE no quotes
+     var matchString = ""+data[key];
+
+     //Check if we have a COALESCE at the beginning no quotation marks
+     if (matchString.match(/^COALESCE/i)){
+         paramString += data[key];
+     }
+     //Otherwise insert quotations with the item
+     else {
+         paramString += "'"+data[key]+"'";
+     }
+     
+     //If we are below the last number append a comma for the next '?'
+     if (count < numParams-1) {
+      paramString += ",";
+     }
+     count++;
+  }
+  //Close the param string
+  paramString += ")";
+  console.log("VALUE STRING: " + paramString);
+  return paramString;
+}
 
 
 //===== PUBLIC =================================================================
@@ -419,5 +464,13 @@ module.exports.getDBMessage = getDBMessage;
 module.exports.allDBMessage = allDBMessage;
 module.exports.eachDBMessage = eachDBMessage;
 module.exports.getInputArray = getInputArray;
-module.exports.database = db;
+module.exports.db = db;
+
+//For creating custom sql messages fast
+module.exports.getWhereFields = getWhereFields;
+module.exports.getSetFields = getSetFields;
+module.exports.getSQLMessageByAppending = getSQLMessageByAppending;
+module.exports.SQL_MSG = SQL_MSG;
+module.exports.DB_FIELDS = DB_FIELDS;
+module.exports.getValues = getValues;
 
