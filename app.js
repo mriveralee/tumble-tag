@@ -363,7 +363,8 @@ app.get('/followers', function (req, res) {
  //my token/secret for testing need to keep updating when revoking access
  var token = "5tV1X0bphJ2Ra5M0Ax6Km2BLA4LvBy66hWljZQAiWWowNbjYvv";
  var token_secret = "t4fCMBipPE54SPyYRNqrSSN7mYizizN7QkSJ9voCrQxI5w7RSj";
- var blogName = "mikeriv.tumblr.com"; 
+ var blogName = "mikeriv.tumblr.com";
+ var username = "mikeriv";
  
  var postsCallback = function(users, response) {
     var count = 0;
@@ -392,8 +393,38 @@ app.get('/followers', function (req, res) {
             //TODO: TAKE THE DATA and scrap it for the current user's handle and then send notifcation
               
             //Returns the json
-            //allPostData is an array containing all posts for followers
-            response.send(allPostData);
+            //allPostData is an array containing  arrays of all posts for followers
+           var postsWithUsernameTag = [];
+           
+           //Check all posts for our username
+           for (postsKey in allPostData) {          
+               var posts = allPostData[postsKey];
+              //console.log(post);
+               for (key in posts) {
+                   var post = posts[key];
+                   //var postBody = getBodyForPost(post);
+                   var postTags = post['tags'];
+                  // console.log("TAGS: " + postTags);
+         
+                   var hasTagForUsername = false;
+                   if (postTags) {
+                       for (var tagNum = 0; tagNum < postTags.length; tagNum++) {
+                           var tag = postTags[tagNum];
+                           
+                           var taggedUsername = tag.match(//ig); 
+                           if(taggedUsername){
+                               hasTagForUsername = true;
+                               break;
+                           }    
+                       }
+                       if (hasTagForUsername) {
+                           postsWithUsernameTag.push(post);
+                       }
+                   }
+                }
+             }
+            response.send(postsWithUsernameTag);
+           // response.send(allPostData);
         }
     };
     
@@ -485,6 +516,55 @@ function getPostsForFollower(user, grabbedPostDataCallback) {
     });
 }
 
+
+var POST_TYPE = {
+    'text' : 'text',
+    'photo' : 'photo',
+    'quote' : 'quote',
+    'link' : 'link',
+    'chat' : 'chat',
+    'audio' : 'audio',
+    'video' : 'video',
+    'answer' : 'answer'
+}
+
+
+function getBodyForPost(post) {
+    var postBody = "";
+    if (post) {
+        var postType = post.type;
+       switch (postType) {
+           case POST_TYPE.text:
+               postBody = 'body';
+               break;
+           case POST_TYPE.photo:
+               postBody = 'caption';
+               break;
+           case POST_TYPE.quote:
+            postBody = 'source';
+               break;
+           case POST_TYPE.link:
+            postBody = 'description';
+               break;
+           case POST_TYPE.chat:
+            postBody = 'body';
+               break;
+           case POST_TYPE.audio:
+            postBody = 'caption';
+               break;
+           case POST_TYPE.video:
+            postBody = 'caption';
+               break;
+           case POST_TYPE.answer:
+            postBody = 'answer';
+               break;
+           default:
+            postBody = 'body';
+            break;
+       }
+    } 
+    return postBody;
+}
 
 
 /// LISTENING AT BOTTOM
