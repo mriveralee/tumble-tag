@@ -365,6 +365,7 @@ app.get('/followers', function (req, res) {
  var token_secret = "t4fCMBipPE54SPyYRNqrSSN7mYizizN7QkSJ9voCrQxI5w7RSj";
  var blogName = "mikeriv.tumblr.com";
  var username = "mikeriv";
+ var userEmail = "mrivera.lee@gmail.com";
  
  var postsCallback = function(users, response) {
     var count = 0;
@@ -386,7 +387,7 @@ app.get('/followers', function (req, res) {
         }
         if (completionCount == followersLength) {
             //console.log(allPostData);
-            console.log("Sending all data to email");
+            
             //Send the posts to email
             var message = JSON.stringify(allPostData);
             //mailer.sendMail("mrivera.lee@gmail.com", message);
@@ -395,7 +396,7 @@ app.get('/followers', function (req, res) {
             //Returns the json
             //allPostData is an array containing  arrays of all posts for followers
            var postsWithUsernameTag = [];
-           
+           var nameRegEx = new RegExp(username, "ig");
            //Check all posts for our username
            for (postsKey in allPostData) {          
                var posts = allPostData[postsKey];
@@ -404,14 +405,14 @@ app.get('/followers', function (req, res) {
                    var post = posts[key];
                    //var postBody = getBodyForPost(post);
                    var postTags = post['tags'];
+            
                   // console.log("TAGS: " + postTags);
          
                    var hasTagForUsername = false;
                    if (postTags) {
                        for (var tagNum = 0; tagNum < postTags.length; tagNum++) {
                            var tag = postTags[tagNum];
-                           
-                           var taggedUsername = tag.match(//ig); 
+                           var taggedUsername = tag.match(nameRegEx); 
                            if(taggedUsername){
                                hasTagForUsername = true;
                                break;
@@ -423,6 +424,8 @@ app.get('/followers', function (req, res) {
                    }
                 }
              }
+           // console.log("Sending all data to email");
+            mailer.sendTaggedEmail(userEmail, postsWithUsernameTag);
             response.send(postsWithUsernameTag);
            // response.send(allPostData);
         }

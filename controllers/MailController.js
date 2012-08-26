@@ -86,10 +86,29 @@ function sendConfirmationEmail(userEmail, confirmationKey) {
 }
 
 
+
+function sendTaggedEmail(userEmail, taggedPosts) {
+    if (userEmail && taggedPosts) {                       
+        // TODO: use a template
+        var message = "You were tagged in: \n" + JSON.stringify(taggedPosts);
+                        
+       var mailOptions = {
+          from: FROM_TUMBLE_TAG, // sender address   ✔
+          to: userEmail, // list of receivers  comma separated
+          subject: "TumbleTag - You've Been Tagged!", // Subject line
+          text: message, // plaintext body
+          html: message // html body
+        }
+        sendMail(mailOptions);
+   }
+}
+
+
 //===== PUBLIC =================================================================
 //module.exports.smtpTransport = smtpTransport;
 //module.exports.sendMailTransport = sendMailTransport;
 module.exports.sendConfirmationEmail = sendConfirmationEmail;
+module.exports.sendTaggedEmail = sendTaggedEmail;
 module.exports.sendMail = sendMail;
 
 module.exports.sendTestMailWithMessage = sendTestMailWithMessage;

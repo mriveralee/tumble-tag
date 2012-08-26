@@ -19,9 +19,7 @@
     "crypto": "*",
     "validator": "*",
     "async": "*",
-    "tumblr" : "*",
-    "ntumblr" : "*"
-    
+    "cron" : "*"    
   },
   "subdomain": "mriveralee.tumble-tag",
   "engines": {
