@@ -1,6 +1,6 @@
 var nodemailer = require("nodemailer");
 var sendMailTransport = nodemailer.createTransport("Sendmail");
-var FROM_TUMBLE_TAG = "Tumble Tag <tumbletag@gmail.com>";
+var FROM_TUMBLE_TAG = "TumbleTag <tumbletag@gmail.com>";
 
 // create reusable transport method (opens pool of SMTP connections)
 var smtpTransport = nodemailer.createTransport("SMTP",{
@@ -10,16 +10,6 @@ var smtpTransport = nodemailer.createTransport("SMTP",{
     pass: "cctest123"
   }
 });
-
-
-// setup e-mail data with unicode symbols
-var mailOptions = {
-  from: FROM_TUMBLE_TAG, // sender address   ✔
-  to: "mrivera.lee@gmail.com", // list of receivers  comma separated
-  subject: "You're Awesome- Thanks For Registering", // Subject line
-  text: "Hello world ✔", // plaintext body
-  html: "<b>Hello world ✔</b>" // html body
-}
 
 // send mail with defined transport object
 function sendTestMailWithMessage(message) {
@@ -37,9 +27,6 @@ function sendTestMailWithMessage(message) {
     //smtpTransport.close(); // shut down the connection pool, no more messages
   });
 }
-
-
-
 
 // send mail with defined transport object
 function sendMail(mailOptions) {
@@ -72,12 +59,12 @@ function sendConfirmationEmail(userEmail, confirmationKey) {
         // TODO: use a template
         var message = "To begin receiving tagging notifications, please confirm your email address:<br>" 
                         + confirmationHTML 
-                        + "<br><br>Thanks,<br>Tumble Tag";
+                        + "<br><br>Thanks,<br>TumbleTag Staff";
                         
        var mailOptions = {
           from: FROM_TUMBLE_TAG, // sender address   ✔
           to: userEmail, // list of receivers  comma separated
-          subject: "You're Awesome- Thanks For Registering For Tumble Tag", // Subject line
+          subject: "You're Awesome- Thanks For Registering!", // Subject line
           text: message, // plaintext body
           html: message // html body
         }
@@ -95,7 +82,7 @@ function sendTaggedEmail(userEmail, taggedPosts) {
        var mailOptions = {
           from: FROM_TUMBLE_TAG, // sender address   ✔
           to: userEmail, // list of receivers  comma separated
-          subject: "TumbleTag - You've Been Tagged!", // Subject line
+          subject: "You've Been Tagged!", // Subject line
           text: message, // plaintext body
           html: message // html body
         }

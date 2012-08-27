@@ -22,7 +22,7 @@ var SQL_MSG = {
 
 // Field String of the form (field_1, field_2, ...) for a db nameKey;
 var DB_FIELDS = {
-  'users' : "(id, username, email, oauth_token, oauth_secret, confirmation_key, confirmed, date_created)"
+  'users' : "(id, username, email, oauth_token, oauth_secret, confirmation_key, confirmed, date_created, timestamp_last_tagged)"
 };
 
 
@@ -41,7 +41,8 @@ function createDatabase(database){
                                            oauth_secret TEXT,\
                                            confirmation_key TEXT,\
                                            confirmed INTEGER,\
-                                           date_created TEXT)");
+                                           date_created INTEGER,\
+                                           timestamp_last_tagged INTEGER)");
                                             /*    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, \
                                            username TEXT , \
                                            email TEXT, \
@@ -82,12 +83,12 @@ function insertInto(tableName, params) {
   }
   var msgData = [SQL_MSG.INSERT_INTO, tableName, DB_FIELDS[tableName], SQL_MSG.VALUES, paramString];
   var sqlMessage = getSQLMessageByAppending(msgData);
-    console.log(sqlMessage);
+    //console.log(sqlMessage);
   if (sqlMessage) {
-    console.log("WITH PARAMS:" + JSON.stringify(params));
+    //console.log("WITH PARAMS:" + JSON.stringify(params));
     //Convert Params to an array
     var paramsArray = getInputArray(params);
-    console.log(paramsArray);
+    //console.log(paramsArray);
     return runDBMessage(sqlMessage, paramsArray);
 
   }
@@ -113,8 +114,8 @@ function update(tableName, setParams, whereParams, callback ) {
   var setFields = getSetFields(setParams);
   var whereFields = getWhereFields(whereParams);
 
-  console.log("SET FIELDS:" + setFields);
-  console.log("WHERE FIELDS:" + whereFields);
+  //console.log("SET FIELDS:" + setFields);
+  //console.log("WHERE FIELDS:" + whereFields);
 
   if (!setFields) {
     errorConsole.throwError("setFields is undefined", "update()", dbControllerName);
@@ -146,9 +147,16 @@ function selectAllFrom(tableName, whereParams, callback) {
     errorConsole.throwError("tableName or params is undefined", "update()", dbControllerName);
     return;
   }
-  var whereFields = getWhereFields(whereParams);
-  console.log("WHERE FIELDS:" + whereFields);
-
+  //If "ALL" where just select all
+  var whereFields = "";
+  if (whereParams === "ALL") {
+      whereFields = ""
+  }
+  else if (whereParams) {
+      whereFields = getWhereFields(whereParams);
+  }
+  
+  //console.log("WHERE FIELDS:" + whereFields);
   var msgData = [SQL_MSG.SELECT_ALL_FROM, tableName, whereFields];
   var sqlMessage = getSQLMessageByAppending(msgData);
 
@@ -174,7 +182,7 @@ function selectFrom(tableName, whereParams, callback) {
     return;
   }
   var whereFields = getWhereFields(whereParams);
-  console.log("WHERE FIELDS:" + whereFields);
+  //console.log("WHERE FIELDS:" + whereFields);
 
   var msgData = [SQL_MSG.SELECT, tableName, whereFields];
   var sqlMessage = getSQLMessageByAppending(msgData);
@@ -253,7 +261,7 @@ function getWhereFields(whereParams, options) {
 
 function runDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
-      console.log("Database - RUN: SUCCESS");
+      //console.log("Database - RUN: SUCCESS");
       return db.run(sqlMessage, params, callback);
       
   }
@@ -265,7 +273,7 @@ function runDBMessage(sqlMessage, params, callback) {
 
 function getDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
-    console.log("Database - GET: SUCCESS");
+    //console.log("Database - GET: SUCCESS");
     if(!params) {
       return db.get(sqlMessage, [], callback);
     }
@@ -282,7 +290,7 @@ function getDBMessage(sqlMessage, params, callback) {
 
 function allDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
-     console.log("Database - ALL: SUCCESS");
+     //console.log("Database - ALL: SUCCESS");
     if(!params) {
       return db.all(sqlMessage, callback);
     }
@@ -299,7 +307,7 @@ function allDBMessage(sqlMessage, params, callback) {
 
 function eachDBMessage(sqlMessage, params, callback) {
   if (sqlMessage) {
-    console.log("Database - EACH: SUCCESS");
+    //console.log("Database - EACH: SUCCESS");
     if(!params) {
       return db.each(sqlMessage, callback);
     }
@@ -331,7 +339,7 @@ function getNumParams(data) {
       numParams += 1;
     }
   }
-  console.log("NUM_PARAMS: " + numParams);
+  //console.log("NUM_PARAMS: " + numParams);
   return numParams;
 }
 
@@ -370,7 +378,7 @@ function getParamsString(data) {
 
   //Close the param string
   paramString += ")";
-  console.log("PARAM STRING: " + paramString);
+  //console.log("PARAM STRING: " + paramString);
   return paramString;
 }
 
@@ -391,7 +399,7 @@ function getSQLMessageByAppending(messageDetails) {
   }
   //Remove trailing space
   sqlMessage = sqlMessage.substring(0, sqlMessage.length-1);
-  console.log("SQL COMMAND: " + sqlMessage);
+  //console.log("SQL COMMAND: " + sqlMessage);
   return sqlMessage;
 
 }
@@ -448,7 +456,7 @@ function getValues(data) {
   }
   //Close the param string
   paramString += ")";
-  console.log("VALUE STRING: " + paramString);
+  //console.log("VALUE STRING: " + paramString);
   return paramString;
 }
 

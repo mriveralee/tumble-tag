@@ -1,6 +1,6 @@
 /* Error Console Controller
  *
- *  Simple console controller for logging errors with detail
+ *  Simple controller for logging errors with detail
  *
  */
 

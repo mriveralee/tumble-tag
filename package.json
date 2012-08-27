@@ -19,7 +19,8 @@
     "crypto": "*",
     "validator": "*",
     "async": "*",
-    "cron" : "*"    
+    "cron" : "*",
+    "time" : "*"
   },
   "subdomain": "mriveralee.tumble-tag",
   "engines": {
