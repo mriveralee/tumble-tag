@@ -7,7 +7,7 @@
     "start": "node app.js"
   },
   "dependencies": {
-    "express": "3.x",
+    "express": "3.0.0beta7",
     "request": "*",
     "oauth": "*",
     "async": "*",
@@ -18,9 +18,7 @@
     "crypto": "*",
     "validator": "*",
     "cron": "*",
-    "connect": "*",
-    "connect-mongodb": "*",
-    "mongoose": "*"
+    "sqlite3": "*"
   },
   "subdomain": "mriveralee.test-tumble",
   "engines": {

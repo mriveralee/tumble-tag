@@ -49,149 +49,6 @@ var Validator = require('validator');
 //var check = require('validator').check;
 //var sanitize = require('validator').sanitize;
 
-
-/***************** MONGODB *****************************/
-var mongoose = require('mongoose');
-//mongoose.connect('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
-//var db = mongoose.createConnection('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
-var db = mongoose.createConnection('mongodb://127.0.0.1/test');
-
-var userSchema = new mongoose.Schema({
-	'id' : String,
-	'username' : String,
-	'email' : String,
-    'oauth_token' : String,
-	'oauth_secret' : String,
-	'confirmation_key' : String,
-	'confirmed' : Boolean,
-	'date_created' : Number,
-	'timestamp_last_tagged' : Number
-});
-
-userSchema.methods.setEmail = function(email) {
-	this.email = email;
-}
-userSchema.methods.setConfirmationKey = function(key) {
-	this.confirmation_key = key;
-}
-userSchema.methods.setConfirmed = function(isConfirmed) {
-	this.confirmed = isConfirmed;
-}
-userSchema.methods.setTimestampLastTagged = function(runTimestamp) {
-	this.timestamp_last_tagged = runTimestamp;
-}
-
-
-var UserModel = db.model('User', userSchema);
-/****************** END MONGODB *********************/
-
-
-//Deprecated
-//var app = express.createServer();
-
- var app = express();
-
-
-//// TESTING NODE PAD APP CRAP
-var connect= require('connect'),
-MongoStore = require('connect-mongodb'),
-my_db = "mongodb://localhost/test",
-db = mongoose.connect(my_db);
-///
-
-/**
-    * Model: LoginToken
-    *
-    * Used for session persistence.
-    */
-  var LoginToken = new mongoose.Schema({
-    email: { type: String, index: true },
-    series: { type: String, index: true },
-    token: { type: String, index: true }
-  });
-
-  LoginToken.method('randomToken', function() {
-    return Math.round((new Date().valueOf() * Math.random())) + '';
-  });
-
-  LoginToken.pre('save', function(next) {
-    // Automatically create the tokens
-    this.token = this.randomToken();
-
-    if (this.isNew)
-      this.series = this.randomToken();
-
-    next();
-  });
-
-  LoginToken.virtual('id')
-    .get(function() {
-      return this._id.toHexString();
-    });
-
-  LoginToken.virtual('cookieValue')
-    .get(function() {
-      return JSON.stringify({ email: this.email, token: this.token, series: this.series });
-    });
-
-  mongoose.model('LoginToken', LoginToken);
-
-
-
-/////
-
-
-
-
-app.configure(function() {
-	app.set('port', process.env.port || 3000);
-	// process.env.port || 3000
-	app.set('views', __dirname + '/views');
-	app.set('view engine', 'ejs');
-	// app.set('view engine', 'jade');
-	app.use(express.favicon());
-	app.use(express.logger('dev'));
-	app.use(express.bodyParser());
-	app.use(express.methodOverride());
-
-	 app.use(express.cookieParser()); 
-	app.use(express.session({ store: MongoStore(my_db), secret: 'topsecret~1!!!' }));
-
-	 //express.session({ secret: 'keyboard cat', store: new MemoryStore({ reapInterval: 60000 * 10 })});
-	/*app.use(express.session({
-		store: new MongoStore({ db : mongoose.connection.db }),
-		maxAge: new Date(Date.now() + 3600000),
-		secret : 'supGURLHowYouDoin'
-	}));
-*/
-
-	//DEBUG
-	app.use(express.errorHandler());
-	//Passport
-	app.use(passport.initialize());
-	app.use(app.router);
-	app.use(express.static(__dirname + '/public'));
-
-	//Make DB
-	//databaseController.createDatabase(db);
-});
-//
-app.configure('development', function() {
-	app.use(express.errorHandler());
-	app.set('port', app.get('port'));
-	app.use(express.bodyParser());
-	app.use(express.methodOverride());
-	app.use(express.cookieParser());
-});
-//http.createServer(app).listen(app.get('port'), function(){
-//  console.log("Express server listening on port " + app.get('port'));
-//});
-
-
-
-
-
-
 ////////PASSPORT - OAUTH
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -224,38 +81,28 @@ passport.use(new TumblrStrategy({
 		var currentDate = new Date();
 		//console.log(profile);
 		var data = {
-			'index' : {unique:true, dropDups:true},
-		    'username' : profile.username,
+			'id' : 'COALESCE((SELECT id FROM users WHERE username="' + profile.username + '"), last_insert_rowid()+1)',
+			'username' : profile.username,
+			'email' : ' COALESCE((SELECT email FROM users WHERE username="' + profile.username + '"), NULL) ',
 			'oauth_token' : token,
 			'oauth_secret' : tokenSecret,
-			'confirmation_key' : "",
+			'confirmation_key' : 0,
 			'confirmed' : 0,
 			'date_created' : currentDate.getTime(),
-			'timestamp_last_tagged' : 0		
+			'timestamp_last_tagged' : 'COALESCE((SELECT "timestamp_last_tagged" FROM users WHERE username="' + profile.username + '"), 0) '
 		};
-
-		delete data.username;
 
 		var whereParams = {
 			'username' : profile.username
 		};
 
-	UserModel.update(whereParams, data, {upsert: true}, function(err){});
-
-	   /* UserModel.findOne(whereParams, function(err, user) {
-	    	if (user != null) {
-
-
-	    	}
-
-	    });*/
 		//databaseController.insertInto('users', data);
 
 		//console.log(data);
-		//var msg = "INSERT OR REPLACE INTO " + "users " + databaseController.DB_FIELDS.users + " VALUES " + databaseController.getValues(data);
+		var msg = "INSERT OR REPLACE INTO " + "users " + databaseController.DB_FIELDS.users + " VALUES " + databaseController.getValues(data);
 		//console.log("RUN MESSAGE \n\n"+msg+"\n\n\n");
-////////// DB REPLACE
-/*		db.run(msg, function(error, row) {
+
+		db.run(msg, function(error, row) {
 			if(error) {
 				console.log(error);
 			} else {
@@ -263,14 +110,49 @@ passport.use(new TumblrStrategy({
 				//console.log("ROW is: " + JSON.stringify(row));
 			}
 		});
-
-*/
 		return done(null, profile);
 	});
 }));
 /////
 
-///Routes
+var app = express.createServer();
+
+app.configure(function() {
+	app.set('port', process.env.port || 3000);
+	// process.env.port || 3000
+	app.set('views', __dirname + '/views');
+	app.set('view engine', 'ejs');
+	// app.set('view engine', 'jade');
+	app.use(express.favicon());
+	app.use(express.logger('dev'));
+	app.use(express.bodyParser());
+	app.use(express.methodOverride());
+	app.use(express.cookieParser());
+	app.use(express.session({
+		secret : 'supGURLHowYouDoin'
+	}));
+
+	//DEBUG
+	app.use(express.errorHandler());
+	//Passport
+	app.use(passport.initialize());
+	app.use(app.router);
+	app.use(express.static(__dirname + '/public'));
+
+	//Make DB
+	databaseController.createDatabase(db);
+});
+//
+app.configure('development', function() {
+	app.use(express.errorHandler());
+	app.set('port', app.get('port'));
+	app.use(express.bodyParser());
+	app.use(express.methodOverride());
+	app.use(express.cookieParser());
+});
+//http.createServer(app).listen(app.get('port'), function(){
+//  console.log("Express server listening on port " + app.get('port'));
+//});
 
 app.get('/', function(req, res) {
 	res.render('index', {
@@ -298,14 +180,6 @@ app.get('/logout', function(req, res) {
 app.post('/loginWithEmail', function(req, res) {
 	//Store email in our session
 	//console.log("LOGIN WITH EMAIL:" + req.body.email);
-
-
-
-	//var loginToken = new LoginToken({ email: req.body.email });
-       /* loginToken.save(function() {
-          res.cookie('logintoken', loginToken.cookieValue, { expires: new Date(Date.now() + 2 * 604800000), path: '/' });
-          res.redirect('/documents');*/
-        //});
 	req.session.userName = req.body.email;
 	res.redirect('/auth/tumblr');
 });
@@ -326,116 +200,55 @@ app.get('/auth/tumblr', passport.authenticate('tumblr'), function(req, res) {
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
 //  URL we give to tumblr is HOSTNAME.COM/auth/tumblr/callback
-app.get('/auth/tumblr/callback', 
-	passport.authenticate('tumblr', {failureRedirect : '/login'}), 
-	function(req, res) {
-		//console.log("TUMBLR USER INFORMATION: \n");
+app.get('/auth/tumblr/callback', passport.authenticate('tumblr', {
+	failureRedirect : '/login'
+}), function(req, res) {
+	//console.log("TUMBLR USER INFORMATION: \n");
 
-		var setParams = {
-			'email' : req.session.userName
+	var setParams = {
+		'email' : req.session.userName
+	};
+	var whereParams = {
+		'username' : (req.user.username) ? (req.user.username) : "NO SUCH USER"
+	};
+	databaseController.update('users', setParams, whereParams);
+	var count = 0;
+	databaseController.selectAllFrom('users', whereParams, function(err, row) {
+		if(err) {
+			var errAtRow = err + "at row " + row;
+			errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
+			return;
+		}
+		// var userEmail = row['email'];
+		var userEmail = req.session.userName;
+		//console.log("ROW: " + row +" with EMAIL:" + userEmail);
+
+		//Create confirmation Key
+		var confirmationSha1 = crypto.createHash('sha1');
+		var currentDate = new Date();
+		var timeString = currentDate.getTime() + "";
+
+		confirmationSha1.update(SALT + userEmail + timeString);
+		var confirmationKey = confirmationSha1.digest('base64');
+
+		var setUserParams = {
+			'email' : userEmail,
+			'confirmation_key' : confirmationKey,
+			'confirmed' : 0
 		};
-		var whereParams = {
-			'username' : (req.user.username) ? (req.user.username) : "NO SUCH USER"
+
+		var whereUserParams = {
+			'username' : row['username']
 		};
-		//databaseController.update('users', setParams, whereParams);
-		var count = 0;
-		///////////////////////////DB CHANGE
-		 UserModel.findOne(whereParams, function(err, user) {
-	    	if (err) {
-	    		throw err;
-	    		return;
-	    	}
-	    	if (user != null) {
-		    		// var userEmail = row['email'];
-				var userEmail = req.session.userName;
-				//console.log("ROW: " + row +" with EMAIL:" + userEmail);
+		console.log("\n\nCONFIRM KEY: " + row['confirmation_key']);
+		databaseController.update('users', setUserParams, whereUserParams);
 
-				//Create confirmation Key
-				var confirmationSha1 = crypto.createHash('sha1');
-				var currentDate = new Date();
-				var timeString = currentDate.getTime() + "";
-
-				confirmationSha1.update(SALT + userEmail + timeString);
-				var confirmationKey = confirmationSha1.digest('base64');
-				console.log("A CKEY :" + confirmationKey);
-				var setUserParams = {
-					'email' : userEmail,
-					'confirmation_key' : confirmationKey,
-					'confirmed' : 0
-				};
-
-				user.email = userEmail;
-				user.confirmation_key = confirmationKey;
-				user.confirmed = 0;
-
-				user.save(function(err) {
-			      if (err)
-			        console.log('error');
-			      else
-			        console.log('success');
-					mailer.sendConfirmationEmail(userEmail, confirmationKey);
-					count++;
-					console.log("\n\n***************");
-					console.log(user);
-					console.log("\n\n***************");
-			    });
-
-				// var whereUserParams = {
-				// 	'username' : row['username']
-				// };
-				//console.log("\n\nCONFIRM KEY: " + row['confirmation_key']);
-				
-				// var whereParams = {
-				// 	'username' : profile.username
-				// };
-
-	//UserModel.update(whereParams, data, {upsert: true}, function(err){});
-
-
-				//databaseController.update('users', setUserParams, whereUserParams);
-
-	    	}
-	    });
-
-
-
-	/*	databaseController.selectAllFrom('users', whereParams, function(err, row) {
-			if(err) {
-				var errAtRow = err + "at row " + row;
-				errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
-				return;
-			}
-			// var userEmail = row['email'];
-			var userEmail = req.session.userName;
-			//console.log("ROW: " + row +" with EMAIL:" + userEmail);
-
-			//Create confirmation Key
-			var confirmationSha1 = crypto.createHash('sha1');
-			var currentDate = new Date();
-			var timeString = currentDate.getTime() + "";
-
-			confirmationSha1.update(SALT + userEmail + timeString);
-			var confirmationKey = confirmationSha1.digest('base64');
-
-			var setUserParams = {
-				'email' : userEmail,
-				'confirmation_key' : confirmationKey,
-				'confirmed' : 0
-			};
-
-			var whereUserParams = {
-				'username' : row['username']
-			};
-			console.log("\n\nCONFIRM KEY: " + row['confirmation_key']);
-			databaseController.update('users', setUserParams, whereUserParams);
-
-			mailer.sendConfirmationEmail(userEmail, confirmationKey);
-			count++;
-		});
-	*/
-		res.render('index', {
-			user : req.user
-		});
+		mailer.sendConfirmationEmail(userEmail, confirmationKey);
+		count++;
+	});
+	res.render('index', {
+		user : req.user
+	});
 });
 
 app.get('/confirm/:email/:key', function(req, res) {
@@ -451,8 +264,7 @@ app.get('/confirm/:email/:key', function(req, res) {
 		var validEmail = Validator.sanitize(email).str;
 		var validKey = Validator.sanitize(key).str;
 
-
-		if(validEmail && validKey && validKey != "") {
+		if(validEmail && validKey) {
 			var whereUserParams = {
 				'email' : validEmail,
 				'confirmation_key' : validKey
@@ -462,39 +274,6 @@ app.get('/confirm/:email/:key', function(req, res) {
 				'confirmed' : 1
 				//,'confirmation_key' : ""
 			};
-
-			 UserModel.findOne(whereUserParams, function(err, user) {
-		    	if (err) {
-		    		sendErrorResponse(res, "Invalid Confirmation Key");
-		    		return;
-		    	}
-		    	if (user != null) {
-			   		if (user.confirmed === 1) {
-			   			sendResponse(res, "You are already confirmed! Wooo!");
-						return;
-			   		}
-			   		else {
-			   			user.confirmed = 1;
-						user.save(function(err) {
-					    	if (err){
-					        	console.log('error confirming user');
-					    		sendErrorResponse(res, "Error confirming user");
-					    		return;
-						    } 
-						    else {
-						        console.log('success confirming user');
-						    	sendResponse(res, "You are confirmed! Wooo!");
-								return;
-							}
-				    	});
-					}
-				}
-			});
-
-
-
-	/////// DB REPLACE
-/*	
 			databaseController.update('users', setUserParams, whereUserParams, function(err) {
 				if(err) {
 					// Error in table
@@ -515,14 +294,12 @@ app.get('/confirm/:email/:key', function(req, res) {
 					sendErrorResponse(res, "Invalid Confirmation Key");
 					return;
 				}
-			});*/
+			});
 		}
 	} else {
 		sendErrorResponse(res, "Invalid Confirmation Key");
 	}
 });
-
-
 //Sends an error response message
 function sendErrorResponse(res, message) {
 	var errorMessage = "Error: " + message;
@@ -547,12 +324,6 @@ function ensureAuthenticated(req, res, next) {
 }
 
 function getTaggedPostsForAllUsers(req, res) {
-	console.log("WOOOO");
-	UserModel.find({}, function(err, allUsers){
-    	console.log(allUsers);
-
-	});
-
 	//my token/secret for testing need to keep updating when revoking access
 	/* var token = "5tV1X0bphJ2Ra5M0Ax6Km2BLA4LvBy66hWljZQAiWWowNbjYvv";
 	var token_secret = "t4fCMBipPE54SPyYRNqrSSN7mYizizN7QkSJ9voCrQxI5w7RSj";
@@ -563,10 +334,7 @@ function getTaggedPostsForAllUsers(req, res) {
 	*/
 	//databaseController.update('users', setParams, whereParams);
 	// Get All USers From The Table
-	
-////// DB REPLACE
-
-/*	databaseController.selectAllFrom('users', "ALL", function(err, row) {
+	databaseController.selectAllFrom('users', "ALL", function(err, row) {
 		if(err) {
 			var errAtRow = err + "at row " + row;
 			errorConsole.throwError(errAtRow, "selectAllFrom()", "app.js");
@@ -695,10 +463,9 @@ function getTaggedPostsForAllUsers(req, res) {
 				}
 				getFollowers(blogName, token, token_secret, postsCallback, res);
 			}		
-		} 
+		}
 		//Start the process of getting the followers and their posts
 	});
-	*/
 }
 
 //Formats an array of posts into a string for sending with the email message
@@ -814,8 +581,8 @@ var cronJob = require('cron').CronJob;
 var cronTimes = 0;
 var TaggedPostsMailerJob = new cronJob({
 	//Currently Runs Every Minute was at 2 mins
-	//cronTime : '0 0 0 * * * ', //Every day at 12AM mins
-	cronTime : '*/20 * * * * * ', //Every 10 seconds
+	cronTime : '0 0 0 * * * ', //Every day at 12AM mins
+	//cronTime : '*/10 * * * * * ', //Every 10 seconds
 	// FOR TESTING EVERY TEN SECONDS '*/10 * * * * * ',//'00 30 11 * * 1-7',  0 */2
 	onTick : function() {
 		// Runs every weekday (Monday through Friday)
