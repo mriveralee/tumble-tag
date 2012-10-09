@@ -43,94 +43,28 @@ var errorConsole = require('./controllers/ErrorConsoleController');
 var Validator = require('validator');
 
 /***************** MONGODB *****************************/
-var mongoose = require('mongoose');
+var mongoose = require('mongoose'),
+	connect = require('connect'),
+	MongoStore = require('connect-mongodb');
 //mongoose.connect('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
 //var db = mongoose.createConnection('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
-var db = mongoose.createConnection('mongodb://127.0.0.1/test');
 
-var userSchema = new mongoose.Schema({
-	'id' : String,
-	'username' : String,
-	'email' : String,
-    'oauth_token' : String,
-	'oauth_secret' : String,
-	'confirmation_key' : String,
-	'confirmed' : Boolean,
-	'date_created' : Number,
-	'timestamp_last_tagged' : Number
-});
+var my_db = 'mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039';
+//Local Debugging
+//var my_db = 'mongodb://localhost/test';
+var db = mongoose.connect(my_db);
 
-userSchema.methods.setEmail = function(email) {
-	this.email = email;
-}
-userSchema.methods.setConfirmationKey = function(key) {
-	this.confirmation_key = key;
-}
-userSchema.methods.setConfirmed = function(isConfirmed) {
-	this.confirmed = isConfirmed;
-}
-userSchema.methods.setTimestampLastTagged = function(runTimestamp) {
-	this.timestamp_last_tagged = runTimestamp;
-}
-
-
-var UserModel = db.model('User', userSchema);
 /****************** END MONGODB *********************/
-
-
-//Deprecated
-//var app = express.createServer();
-
- var app = express();
-
-
 //// TESTING NODE PAD APP CRAP
-var connect= require('connect'),
-MongoStore = require('connect-mongodb'),
-my_db = "mongodb://localhost/test",
-db = mongoose.connect(my_db);
-///
 
-/**
-    * Model: LoginToken
-    *
-    * Used for session persistence.
-    */
-  // var LoginToken = new mongoose.Schema({
-  //   email: { type: String, index: true },
-  //   series: { type: String, index: true },
-  //   token: { type: String, index: true }
-  // });
 
-  // LoginToken.method('randomToken', function() {
-  //   return Math.round((new Date().valueOf() * Math.random())) + '';
-  // });
-
-  // LoginToken.pre('save', function(next) {
-  //   // Automatically create the tokens
-  //   this.token = this.randomToken();
-
-  //   if (this.isNew)
-  //     this.series = this.randomToken();
-
-  //   next();
-  // });
-
-  // LoginToken.virtual('id')
-  //   .get(function() {
-  //     return this._id.toHexString();
-  //   });
-
-  // LoginToken.virtual('cookieValue')
-  //   .get(function() {
-  //     return JSON.stringify({ email: this.email, token: this.token, series: this.series });
-  //   });
-
-  // mongoose.model('LoginToken', LoginToken);
 
 
 
 ///// App Configurations
+//var app = express.createServer();   //Deprecated
+var app = express();
+
 app.configure(function() {
 	app.set('port', process.env.port || 3000);
 	app.set('views', __dirname + '/views');
@@ -166,9 +100,42 @@ app.configure('development', function() {
 	app.use(express.methodOverride());
 	app.use(express.cookieParser());
 });
-//http.createServer(app).listen(app.get('port'), function(){
-//  console.log("Express server listening on port " + app.get('port'));
-//});
+
+/********** MONGO SCHEMA ******************/
+
+var userSchema = new mongoose.Schema({
+	'id' : String,
+	'username' : String,
+	'email' : String,
+    'oauth_token' : String,
+	'oauth_secret' : String,
+	'confirmation_key' : String,
+	'confirmed' : Boolean,
+	'date_created' : Number,
+	'timestamp_last_tagged' : Number
+});
+
+userSchema.methods.setEmail = function(email) {
+	this.email = email;
+}
+userSchema.methods.setConfirmationKey = function(key) {
+	this.confirmation_key = key;
+}
+userSchema.methods.setConfirmed = function(isConfirmed) {
+	this.confirmed = isConfirmed;
+}
+userSchema.methods.setTimestampLastTagged = function(runTimestamp) {
+	this.timestamp_last_tagged = runTimestamp;
+}
+
+
+var UserModel = db.model('User', userSchema);
+
+
+
+/************ ************* ****************/
+
+
 
 
 
@@ -415,6 +382,9 @@ function sendResponse(res, message) {
 	res.send(message);
 }
 
+
+
+
 //Function - runs process for grabbins tagged posts and emailing them for each user in the db
 function getTaggedPostsForAllUsers(req, res) {
 	UserModel.find({}, function(err, allUsers){
@@ -427,6 +397,9 @@ function getTaggedPostsForAllUsers(req, res) {
 			for (var i = 0; i < allUsers.length; i++) {
 				var currentUser = allUsers[i];
 				// If unconfirmed user we stop
+				if (!currentUser['confirmed']){
+					return;
+				}
 				var token = currentUser['oauth_token'];
 				var token_secret = currentUser['oauth_secret'];
 				//If our username has a different name/blog url like with a '.com' address we use it otherwise append .tumblr
@@ -460,7 +433,7 @@ function getTaggedPostsForAllUsers(req, res) {
 								var message = JSON.stringify(allPostData);
 								//console.log(message);
 								//mailer.sendMail("mrivera.lee@gmail.com", message);
-								//TODO: TAKE THE DATA and scrap it for the current user's handle and then send notifcation
+
 								//Returns the json
 								//allPostData is an array containing  arrays of all posts for followers
 								var postsWithUsernameTag = [];
@@ -499,23 +472,21 @@ function getTaggedPostsForAllUsers(req, res) {
 								}
 								//If we have posts send our mail message
 								if(postsWithUsernameTag.length > 0) {
+									
+									//var msg = cronMsg + JSON.stringify(postsWithUsernameTag);
+									//TODO: FILTER POSTSWITHUSERNAMETAG AND only get needed info from it. use FORMATPOSTSFOREMAIL
+									var formattedPostsWithTag = formatPostsForEmail(postsWithUsernameTag);
+									
 									var cronMsg = "Cron Times: " + cronTimes + "\n\n";
 									var msg = cronMsg + JSON.stringify(postsWithUsernameTag);
-									//
+
+
 
 									mailer.sendTaggedEmail(userEmail, msg);
 									//Update the time of the last tagged post in our DB
 									var lastTagged = mostRecentTimestamp+1;
-									var setParams = {
-										'timestamp_last_tagged' : lastTagged
-									};
-									var whereParams = {
-										'username' : currentUser['username'],
-										'email' : currentUser['email'],
-										'oauth_token' : currentUser['oauth_token'],
-										'oauth_secret' : currentUser['oauth_secret']
-									};
-									///////// CORRECT THIS
+
+									///////// CORRECT THIS --- NEED TO TELL WHO THE POST CAME FROM IF THERE ARE 2 POSTS AT THE SAME TIME
 									currentUser.timestamp_last_tagged = lastTagged;
 									currentUser.save(function(err) {
 								    	if (err){
@@ -562,8 +533,100 @@ function getTaggedPostsForAllUsers(req, res) {
 			});
 }
 
+
+// Filter objects/methods for Posts 
+var POST_TYPE = {
+	'text' : 'text',
+	'photo' : 'photo',
+	'quote' : 'quote',
+	'link' : 'link',
+	'chat' : 'chat',
+	'audio' : 'audio',
+	'video' : 'video',
+	'answer' : 'answer'
+}
+
+
+
+/// TEMPLATE LOADING 
+var ejs = require('ejs'),
+    fs = require('fs');
+    //TaggedPostTemplate = fs.readFileSync(__dirname + Templates.taggedPosts, 'ascii'),
+    
+    // USE FOR RENDERING THE TEMPLATE
+    //rendered = ejs.render(file, { locals: { items:[1,2,3] } });
+
+var Templates = {
+	taggedPosts: fs.readFileSync(__dirname + '/templates/tagged-post.ejs', 'ascii');
+};
+
+function filterPostForEmail(post) {
+	if(post) {
+		var postType = post.type;
+		//ALL HAVE: date, post_url, blog_name, note_count, type
+		var formattedPost = {
+			date: post.date,
+			post_url: post_url,
+			blog_name: post.blog_name,
+			note_count: post.note_count,
+			type: postType
+		};
+		//Based on type, get body of the post
+		switch (postType) {
+			case POST_TYPE.text:
+				//Has title, body
+				formattedPost.body = post.body;
+				formattedPost.title = posts.title;
+				break;
+			case POST_TYPE.photo:
+				//Has caption
+				formattedPost.caption = post.caption;
+				break;
+			case POST_TYPE.quote:
+				//testm source, source_title, source_url
+				postBody = 'source';
+				break;
+			case POST_TYPE.link:
+				//title, description
+				postBody = 'description';
+				break;
+			case POST_TYPE.chat:
+				//title, body
+				postBody = 'body';
+				break;
+			case POST_TYPE.audio:
+				//caption, id3_title
+				postBody = 'caption';
+				break;
+			case POST_TYPE.video:
+				//caption, source_title
+				postBody = 'caption';
+				break;
+			case POST_TYPE.answer:
+				//asking_name, asking_url, question, answer
+				postBody = 'answer';
+				break;
+			default:
+				postBody = 'body';
+				break;
+		}
+	}
+	return formattedPost;
+}
+
+
 //Formats an array of posts into a string for sending with the email message
 function formatPostsForEmail(posts) {
+	var formattedPosts = [];
+	for (var i = 0; i < posts.length; i++) {
+		//Get Type of post
+		var formattedPost = filterPostForEmail(posts[i]);
+		formattedPosts.push(formattedPost);
+	}
+
+	//Now turn formatted Posts into template string
+	var templatedPosts = ejs.render(Templates.taggedPosts, { locals: { posts:formattedPosts } });
+	return formattedPosts;
 
 }
 
@@ -619,54 +682,7 @@ function getPostsForFollower(user, userTag, grabbedPostDataCallback) {
 }
 
 
-// Filter objects/methods for Posts 
-var POST_TYPE = {
-	'text' : 'text',
-	'photo' : 'photo',
-	'quote' : 'quote',
-	'link' : 'link',
-	'chat' : 'chat',
-	'audio' : 'audio',
-	'video' : 'video',
-	'answer' : 'answer'
-}
 
-function getBodyForPost(post) {
-	var postBody = "";
-	if(post) {
-		var postType = post.type;
-		switch (postType) {
-			case POST_TYPE.text:
-				postBody = 'body';
-				break;
-			case POST_TYPE.photo:
-				postBody = 'caption';
-				break;
-			case POST_TYPE.quote:
-				postBody = 'source';
-				break;
-			case POST_TYPE.link:
-				postBody = 'description';
-				break;
-			case POST_TYPE.chat:
-				postBody = 'body';
-				break;
-			case POST_TYPE.audio:
-				postBody = 'caption';
-				break;
-			case POST_TYPE.video:
-				postBody = 'caption';
-				break;
-			case POST_TYPE.answer:
-				postBody = 'answer';
-				break;
-			default:
-				postBody = 'body';
-				break;
-		}
-	}
-	return postBody;
-}
 
 /// LISTENING AT BOTTOM
 app.listen(SERVER_PORT, function() {

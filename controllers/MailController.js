@@ -1,6 +1,6 @@
 var nodemailer = require("nodemailer");
 var sendMailTransport = nodemailer.createTransport("Sendmail");
-var FROM_TUMBLE_TAG = "TumbleTag <tumbletag@gmail.com>";
+var FROM_TUMBLE_TAG = "Tumble Tag <tumbletag@gmail.com>";
 
 // create reusable transport method (opens pool of SMTP connections)
 var smtpTransport = nodemailer.createTransport("SMTP",{
@@ -53,7 +53,8 @@ function sendConfirmationEmail(userEmail, confirmationKey) {
         var encodedEmail = encodeURIComponent(userEmail);
         console.log(encodedKey + " : "+encodedEmail);
         // Route Param Version
-        var confirmationLink = "http://localhost:8000/confirm/"+encodedEmail+"/"+encodedKey;
+        //var confirmationLink = "http://localhost:8000/confirm/"+encodedEmail+"/"+encodedKey;
+        var confirmationLink = "http://mriveralee.test-tumble.jit.su/confirm/"+encodedEmail+"/"+encodedKey;
         var confirmationHTML = "<a href='" + confirmationLink + "'>"+ "Confirm Email"+"</a>";
                                
         // TODO: use a template
