@@ -1,6 +1,7 @@
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  margin:0px 0px; /* Browsers will set a margin > 0 by default, so reset it to 0 here */
+  /*overflow: hidden;*/
+  font-family: 'Open Sans', sans-serif;
 }
 
 
@@ -61,3 +62,48 @@ html {
   position:relative;
   top:1px;
 }
+
+/***** NEWLY ADDED *************/
+
+
+
+#wrapper {
+  height: 10000px;
+}
+
+#head-nav{
+  background-color: #FFFFFF;
+  text-align:right;
+  font-size:11px;
+  color:#161616;
+  width: 100%;
+  height:35px;
+  position:fixed;
+  top:0px;
+  vertical-align:top;
+  display:block;
+}
+
+#home-splash {
+  color: red;
+  font-size: 20px;
+}
+
+#nav-links {
+  position: absolute;
+  right: 0px;
+  margin: 1px 20px;
+  font-size: 20px;
+}
+
+
+
+
+
+
+
+
+
+
+
+

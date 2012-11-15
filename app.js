@@ -556,9 +556,7 @@ var ejs = require('ejs'),
     // USE FOR RENDERING THE TEMPLATE
     //rendered = ejs.render(file, { locals: { items:[1,2,3] } });
 
-var Templates = {
-	taggedPosts: fs.readFileSync(__dirname + '/templates/tagged-post.ejs', 'ascii');
-};
+var Templates = { taggedPosts: fs.readFileSync(__dirname + '/templates/tagged-post.ejs', 'ascii')};
 
 function filterPostForEmail(post) {
 	if(post) {
