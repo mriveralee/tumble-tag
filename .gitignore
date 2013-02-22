@@ -11,6 +11,7 @@ lib-cov
 *.idea
 .idea/*
 *.iml
+*databases
 
 pids
 logs
