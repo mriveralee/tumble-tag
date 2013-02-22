@@ -6,6 +6,7 @@ var express = require('express');
 var routes = require('./routes');
 var http = require('http');
 var SERVER_PORT = 8000;
+var CONFIG = require('./config/config.js');
 
 //Request for making HTTP(S) requests
 var request = require('request');
@@ -34,7 +35,7 @@ var mailer = require('./controllers/MailController.js');
 
 // Crypto
 var crypto = require('crypto');
-var SALT = "BANANASALT-2";
+var SALT = CONFIG.SALT;
 
 // Error Console
 var errorConsole = require('./controllers/ErrorConsoleController');
@@ -46,10 +47,8 @@ var Validator = require('validator');
 var mongoose = require('mongoose'),
 	connect = require('connect'),
 	MongoStore = require('connect-mongodb');
-//mongoose.connect('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
-//var db = mongoose.createConnection('mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039');
 
-var my_db = 'mongodb://nodejitsu:9c28b994d494429442ba453dd21f1faf@alex.mongohq.com:10059/nodejitsudb763664407039';
+var my_db = CONFIG.my_db;
 //Local Debugging
 //var my_db = 'mongodb://localhost/test';
 var db = mongoose.connect(my_db);
