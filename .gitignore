@@ -13,7 +13,7 @@ lib-cov
 *.iml
 *databases
 config
-node_sqlite
+node-sqlite
 
 pids
 logs
