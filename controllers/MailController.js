@@ -1,13 +1,14 @@
 var nodemailer = require("nodemailer");
+var CONFIG = require("../config/config.js");
 var sendMailTransport = nodemailer.createTransport("Sendmail");
-var FROM_TUMBLE_TAG = "Tumble Tag <tumbletag@gmail.com>";
+var FROM_TUMBLE_TAG = "Tumble Tag <"+CONFIG.mailer.username+">";
 
 // create reusable transport method (opens pool of SMTP connections)
 var smtpTransport = nodemailer.createTransport("SMTP",{
-  service: "Gmail",
+  service: CONFIG.mailer.service,
   auth: {
-    user: "tumbletag@gmail.com",
-    pass: "cctest123"
+    user: CONFIG.mailer.username,
+    pass: CONFIG.mailer.pass
   }
 });
 
